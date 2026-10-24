@@ -1,0 +1,25 @@
+section { scroll-margin-top: 84px; }
+.swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+.swatch { width: 28px; height: 28px; border-radius: 50%; border: 0; position: relative; }
+.swatch.on::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid var(--text); }
+.radios { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.radios label, .clear-grid label { display: flex; align-items: center; gap: 10px; }
+.radios input, .clear-grid input { accent-color: var(--accent); width: 16px; height: 16px; }
+.clear-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; margin: 6px 0 4px; }
+.setting.col .row { margin-top: 4px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 4px 0 12px; border-radius: 14px; background: var(--surface2); font-size: 12.5px; }
+.chip button { width: 22px; height: 22px; }
+.chips:empty::before { content: "Nenhum site"; color: var(--muted); font-size: 12.5px; }
+.shield-hero .hero-icon { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, transparent); flex: none; }
+.perm-site { padding: 12px 20px; border-top: 1px solid var(--border); }
+.perm-site:first-child { border-top: 0; }
+.perm-site .site { display: flex; align-items: center; gap: 10px; font-weight: 600; margin-bottom: 6px; }
+.perm-line { display: flex; align-items: center; gap: 10px; padding: 4px 0 4px 30px; }
+.perm-line span { flex: 1; color: var(--muted); }
+.perm-line select { height: 30px; }
+.ext { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-top: 1px solid var(--border); }
+.ext .fav { background: var(--surface2); color: var(--accent); }
+.beta { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); vertical-align: middle; }
+.setting.filtered-out, section.filtered-out { display: none; }
+.sidenav a .ico { margin: 0; }

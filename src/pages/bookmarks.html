@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Favoritos</title>
+  <link rel="icon" href="/assets/icon.png">
+  <link rel="stylesheet" href="/common.css">
+  <link rel="stylesheet" href="/lists.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo" data-logo></span><span>Favoritos</span></div>
+    <label class="search"><span data-icon="search"></span><input id="q" type="search" placeholder="Pesquisar favoritos"></label>
+  </header>
+  <div class="layout">
+    <nav class="sidenav" id="folders"></nav>
+    <main class="content">
+      <div class="toolbar-row">
+        <div class="crumb" id="crumb">Barra de favoritos</div>
+        <button class="btn" id="add-bm"><span data-icon="plus" data-size="16"></span>Adicionar favorito</button>
+        <button class="btn" id="add-folder"><span data-icon="folder" data-size="16"></span>Nova pasta</button>
+        <div style="position:relative">
+          <button class="btn" id="import-btn"><span data-icon="upload" data-size="16"></span>Importar</button>
+          <div class="menu-pop" id="import-menu" hidden style="right:0;top:40px">
+            <button id="import-chrome"><span data-icon="globe" data-size="16"></span>Do Google Chrome</button>
+            <button id="import-html"><span data-icon="fileText" data-size="16"></span>De um arquivo HTML</button>
+          </div>
+        </div>
+        <button class="btn" id="export-btn"><span data-icon="download" data-size="16"></span>Exportar</button>
+      </div>
+      <div class="card" id="list"></div>
+      <div class="empty-state" id="empty" hidden><div data-icon="bookmark" data-size="48"></div><div id="empty-text">Esta pasta está vazia</div></div>
+    </main>
+  </div>
+
+  <dialog id="dlg">
+    <form method="dialog" id="dlg-form">
+      <h3 id="dlg-title">Editar favorito</h3>
+      <label>Nome<input class="input" id="dlg-name" required></label>
+      <label id="dlg-url-wrap">Endereço<input class="input" id="dlg-url" placeholder="https://"></label>
+      <label>Pasta<select id="dlg-folder"></select></label>
+      <div class="actions">
+        <button class="btn" value="cancel" formnovalidate>Cancelar</button>
+        <button class="btn primary" value="ok" id="dlg-ok">Salvar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="/shared/icons.js"></script>
+  <script src="/common.js"></script>
+  <script src="/bookmarks.js"></script>
+</body>
+</html>

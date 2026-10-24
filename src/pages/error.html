@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Erro</title>
+  <link rel="stylesheet" href="/common.css">
+  <style>
+    body { display: grid; place-items: center; min-height: 100vh; }
+    .err { width: min(620px, calc(100vw - 48px)); padding: 40px 0; }
+    .err .big { color: var(--muted); margin-bottom: 18px; }
+    .err.danger .big { color: var(--danger); }
+    .err h1 { font-size: 26px; margin: 0 0 10px; }
+    .err p { color: var(--muted); margin: 0 0 8px; }
+    .err ul { color: var(--muted); padding-left: 20px; }
+    .code { font: 12px ui-monospace, Consolas, monospace; color: var(--muted); margin-top: 14px; }
+    .actions { display: flex; gap: 10px; margin-top: 26px; flex-wrap: wrap; }
+    #advanced-box { margin-top: 18px; padding: 14px 16px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); }
+    #game { display: block; width: 100%; height: 150px; margin-top: 26px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); }
+    .hint { font-size: 12px; color: var(--muted); margin-top: 6px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="err" id="err">
+    <div class="big" id="big"></div>
+    <h1 id="title">Não foi possível acessar esse site</h1>
+    <p id="desc"></p>
+    <ul id="tips"></ul>
+    <div class="code" id="code"></div>
+    <div class="actions">
+      <button class="btn primary" id="retry">Tentar novamente</button>
+      <button class="btn" id="advanced" hidden>Avançado</button>
+    </div>
+    <div id="advanced-box" hidden>
+      <p id="adv-text"></p>
+      <a href="#" id="proceed">Continuar para o site (não seguro)</a>
+    </div>
+    <canvas id="game" width="1200" height="300" hidden></canvas>
+    <div class="hint" id="game-hint" hidden>Sem internet? Pressione Espaço ou clique para jogar o Pulse Runner</div>
+  </div>
+  <script src="/shared/icons.js"></script>
+  <script src="/common.js"></script>
+  <script src="/error.js"></script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src * data: blob:;">
+  <title>PulseBrowser</title>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+  <div id="chrome">
+    <div id="tabstrip">
+      <div id="incognito-badge" title="Janela anônima">
+        <span class="inc-icon"></span><span class="inc-label">Anônima</span>
+      </div>
+      <div id="tabs" role="tablist"></div>
+      <button id="new-tab-btn" class="strip-btn" title="Nova aba (Ctrl+T)"></button>
+      <div class="drag-fill"></div>
+      <div id="caption-spacer"></div>
+    </div>
+
+    <div id="toolbar">
+      <button id="back-btn" class="tb-btn" title="Voltar (Alt+Seta para a esquerda) — clique com o botão direito para ver o histórico"></button>
+      <button id="forward-btn" class="tb-btn" title="Avançar (Alt+Seta para a direita)"></button>
+      <button id="reload-btn" class="tb-btn" title="Recarregar (Ctrl+R)"></button>
+      <button id="home-btn" class="tb-btn" title="Página inicial (Alt+Home)"></button>
+
+      <div id="omnibox">
+        <button id="site-info" title="Ver informações do site"><span class="si-icon"></span><span class="si-label"></span></button>
+        <input id="url-input" type="text" spellcheck="false" autocomplete="off" aria-label="Barra de endereço e de pesquisa">
+        <button id="zoom-badge" class="omni-btn" hidden title="Zoom"></button>
+        <button id="star-btn" class="omni-btn" title="Adicionar aos favoritos (Ctrl+D)"></button>
+      </div>
+
+      <button id="shield-btn" class="tb-btn" title="Pulse Shield"><span class="badge" hidden></span></button>
+      <button id="downloads-btn" class="tb-btn" hidden title="Downloads (Ctrl+J)">
+        <svg class="ring" viewBox="0 0 36 36" aria-hidden="true"><circle class="ring-track" cx="18" cy="18" r="15"/><circle class="ring-bar" cx="18" cy="18" r="15"/></svg>
+        <span class="dl-icon"></span>
+      </button>
+      <div class="tb-sep"></div>
+      <button id="menu-btn" class="tb-btn" title="Personalizar e controlar o PulseBrowser"></button>
+    </div>
+
+    <div id="bookmarks-bar">
+      <div id="bm-items"></div>
+      <button id="bm-overflow" class="bm-item" hidden title="Mais favoritos">»</button>
+      <div class="bm-spacer"></div>
+      <button id="bm-other" class="bm-item" hidden></button>
+    </div>
+
+    <div id="findbar" hidden>
+      <div class="find-box">
+        <span class="find-icon"></span>
+        <input id="find-input" type="text" spellcheck="false" placeholder="Localizar na página" aria-label="Localizar na página">
+        <span id="find-count"></span>
+        <span class="find-sep"></span>
+        <button id="find-prev" class="tb-btn small" title="Anterior (Shift+Enter)"></button>
+        <button id="find-next" class="tb-btn small" title="Próximo (Enter)"></button>
+        <button id="find-close" class="tb-btn small" title="Fechar (Esc)"></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../shared/icons.js"></script>
+  <script src="ui.js"></script>
+</body>
+</html>

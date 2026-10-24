@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Downloads</title>
+  <link rel="icon" href="/assets/icon.png">
+  <link rel="stylesheet" href="/common.css">
+  <link rel="stylesheet" href="/lists.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo" data-logo></span><span>Downloads</span></div>
+    <label class="search"><span data-icon="search"></span><input id="q" type="search" placeholder="Pesquisar downloads"></label>
+  </header>
+  <div class="layout">
+    <nav class="sidenav">
+      <a class="active" href="pulse://downloads/"><span data-icon="download"></span>Downloads</a>
+      <button id="open-folder"><span data-icon="folderOpen"></span>Abrir pasta de downloads</button>
+      <button id="clear-all"><span data-icon="trash"></span>Limpar lista</button>
+      <a href="pulse://settings/#downloads"><span data-icon="settings"></span>Configurações de download</a>
+    </nav>
+    <main class="content">
+      <div class="card" id="list"></div>
+      <div class="empty-state" id="empty" hidden><div data-icon="download" data-size="48"></div><div id="empty-text">Os arquivos que você baixar aparecerão aqui</div></div>
+    </main>
+  </div>
+  <script src="/shared/icons.js"></script>
+  <script src="/common.js"></script>
+  <script src="/downloads.js"></script>
+</body>
+</html>

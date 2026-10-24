@@ -1,0 +1,60 @@
+/* Listas usadas por histórico, favoritos e downloads. */
+.day { margin-bottom: 18px; }
+.day-title { font-size: 13px; font-weight: 600; color: var(--muted); padding: 0 6px 8px; }
+.item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 48px;
+  padding: 6px 10px 6px 16px;
+  border-top: 1px solid var(--border);
+}
+.item:first-child { border-top: 0; }
+.item:hover { background: var(--hover); }
+.item .time { width: 48px; flex: none; color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.item .title { color: var(--text); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.item .title:hover { text-decoration: underline; }
+.item .host { color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; min-width: 60px; max-width: 40%; }
+.item .item-actions { display: flex; gap: 2px; opacity: 0; transition: opacity 0.1s; }
+.item:hover .item-actions, .item:focus-within .item-actions { opacity: 1; }
+.item input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); flex: none; }
+.item.selected { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.item.drop-before { box-shadow: inset 0 2px 0 var(--accent); }
+.item.dragging { opacity: 0.4; }
+.selbar {
+  position: sticky;
+  top: 76px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px 10px 20px;
+  margin-bottom: 14px;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #fff;
+  box-shadow: var(--shadow);
+}
+.selbar .btn { color: #fff; border-color: rgba(255, 255, 255, 0.4); background: transparent; }
+.selbar .btn.primary { background: #fff; color: var(--accent); }
+.more { text-align: center; margin: 16px 0; }
+.toolbar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.crumb { font-size: 18px; font-weight: 600; margin-right: auto; }
+.folder-link { display: flex; align-items: center; gap: 10px; }
+.folder-link.drop-into { background: color-mix(in srgb, var(--accent) 18%, transparent) !important; }
+
+/* Downloads */
+.dl { display: flex; gap: 16px; padding: 16px 18px; align-items: flex-start; }
+.dl + .dl { border-top: 1px solid var(--border); }
+.dl .dl-icon { width: 44px; height: 44px; border-radius: 12px; background: var(--surface2); display: grid; place-items: center; color: var(--accent); flex: none; }
+.dl .dl-main { flex: 1; min-width: 0; }
+.dl .dl-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; color: var(--text); }
+.dl .dl-name.link:hover { text-decoration: underline; cursor: pointer; }
+.dl .dl-name.strike { text-decoration: line-through; color: var(--muted); }
+.dl .dl-url { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dl .dl-status { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+.dl .dl-status.bad { color: var(--danger); }
+.dl .bar { height: 5px; border-radius: 3px; background: var(--surface2); margin-top: 8px; overflow: hidden; }
+.dl .bar > i { display: block; height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.25s; }
+.dl .dl-btns { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.dl .dl-btns .btn { height: 30px; padding: 0 12px; }

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Histórico</title>
+  <link rel="icon" href="/assets/icon.png">
+  <link rel="stylesheet" href="/common.css">
+  <link rel="stylesheet" href="/lists.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo" data-logo></span><span>Histórico</span></div>
+    <label class="search"><span data-icon="search"></span><input id="q" type="search" placeholder="Pesquisar no histórico" autofocus></label>
+  </header>
+  <div class="layout">
+    <nav class="sidenav">
+      <a class="active" href="pulse://history/"><span data-icon="clock"></span>Histórico</a>
+      <a href="pulse://settings/#privacy"><span data-icon="trash"></span>Limpar dados de navegação</a>
+      <a href="pulse://bookmarks/"><span data-icon="bookmark"></span>Favoritos</a>
+      <a href="pulse://downloads/"><span data-icon="download"></span>Downloads</a>
+    </nav>
+    <main class="content">
+      <div class="selbar" id="selbar" hidden>
+        <span id="selcount"></span>
+        <div class="grow"></div>
+        <button class="btn" id="sel-cancel">Cancelar</button>
+        <button class="btn primary" id="sel-delete">Excluir</button>
+      </div>
+      <div id="list"></div>
+      <div class="more" id="more" hidden><button class="btn" id="load-more">Carregar mais</button></div>
+      <div class="empty-state" id="empty" hidden><div data-icon="clock" data-size="48"></div><div id="empty-text">Nenhuma página no histórico</div></div>
+    </main>
+  </div>
+  <script src="/shared/icons.js"></script>
+  <script src="/common.js"></script>
+  <script src="/history.js"></script>
+</body>
+</html>

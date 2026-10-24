@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Nova aba</title>
+  <link rel="icon" href="/assets/icon.png">
+  <link rel="stylesheet" href="/common.css">
+  <link rel="stylesheet" href="/newtab.css">
+</head>
+<body class="nt">
+  <div class="bg" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div>
+
+  <main id="normal">
+    <div class="clock-wrap">
+      <div id="clock">--:--</div>
+      <div id="greeting"></div>
+    </div>
+    <div class="brand-big"><span class="logo" data-logo></span><span>PulseBrowser</span></div>
+    <form id="search-form" class="nt-search" autocomplete="off">
+      <span class="s-icon" data-icon="search" data-size="20"></span>
+      <input id="q" type="text" spellcheck="false" aria-label="Pesquisar">
+    </form>
+    <div id="tiles" class="tiles"></div>
+  </main>
+
+  <main id="incognito" hidden>
+    <div class="inc-art" data-icon="incognito" data-size="64"></div>
+    <h1>Você está navegando em uma janela anônima</h1>
+    <p class="inc-lead">As páginas que você visitar nesta janela não ficarão no histórico, e os cookies e dados dos sites são apagados quando todas as janelas anônimas forem fechadas. Os downloads e favoritos que você criar serão mantidos.</p>
+    <div class="inc-cols">
+      <div class="card card-pad">
+        <b>O PulseBrowser não salva:</b>
+        <ul><li>Seu histórico de navegação</li><li>Cookies e dados dos sites</li><li>Informações digitadas em formulários</li></ul>
+      </div>
+      <div class="card card-pad">
+        <b>Sua atividade ainda pode ser vista por:</b>
+        <ul><li>Os sites que você visita</li><li>Seu empregador ou escola</li><li>Seu provedor de internet</li></ul>
+      </div>
+    </div>
+    <form id="inc-search" class="nt-search" autocomplete="off">
+      <span class="s-icon" data-icon="search" data-size="20"></span>
+      <input id="q2" type="text" spellcheck="false" aria-label="Pesquisar">
+    </form>
+  </main>
+
+  <div class="corner-left" id="shield-stat" hidden></div>
+  <button class="corner-right btn" id="customize-btn"><span data-icon="palette" data-size="16"></span>Personalizar</button>
+
+  <div class="customize card" id="customize" hidden>
+    <div class="row"><b class="grow">Personalizar nova aba</b><button class="icon-btn" id="customize-close" data-icon="x"></button></div>
+    <div class="c-label">Plano de fundo</div>
+    <div class="bg-choices" id="bg-choices"></div>
+    <div class="setting"><div class="text"><div class="title">Mostrar atalhos</div></div><label class="switch"><input type="checkbox" id="opt-shortcuts"></label></div>
+    <div class="row" style="margin-top:8px"><button class="btn" id="restore-tiles">Restaurar atalhos removidos</button></div>
+  </div>
+
+  <script src="/shared/icons.js"></script>
+  <script src="/common.js"></script>
+  <script src="/newtab.js"></script>
+</body>
+</html>

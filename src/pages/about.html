@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Sobre o PulseBrowser</title>
+  <link rel="icon" href="/assets/icon.png">
+  <link rel="stylesheet" href="/common.css">
+  <style>
+    .about { max-width: 860px; margin: 0 auto; padding: 40px 24px 60px; }
+    .hero { display: flex; align-items: center; gap: 20px; margin-bottom: 26px; }
+    .hero .logo svg { width: 84px; height: 84px; display: block; filter: drop-shadow(0 10px 24px rgba(124, 92, 255, 0.4)); }
+    .hero h1 { margin: 0; font-size: 30px; }
+    .kv { display: grid; grid-template-columns: 180px 1fr; gap: 8px 16px; }
+    .kv dt { color: var(--muted); }
+    .kv dd { margin: 0; word-break: break-all; font-variant-numeric: tabular-nums; }
+    .features { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+    .feature { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; }
+    .feature .ico { color: var(--accent); margin-top: 2px; }
+    .feature b { display: block; }
+    table { width: 100%; border-collapse: collapse; }
+    td { padding: 8px 20px; border-top: 1px solid var(--border); }
+    tr:first-child td { border-top: 0; }
+    kbd { font: 12px ui-monospace, Consolas, monospace; padding: 2px 7px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); white-space: nowrap; }
+    td:last-child { text-align: right; }
+  </style>
+</head>
+<body>
+  <div class="about">
+    <div class="hero">
+      <span class="logo" data-logo></span>
+      <div><h1>PulseBrowser</h1><div class="muted" id="ver">—</div></div>
+    </div>
+
+    <div class="card card-pad"><dl class="kv" id="info"></dl></div>
+
+    <h2>Recursos</h2>
+    <div class="features" id="features"></div>
+
+    <h2>Atalhos de teclado</h2>
+    <div class="card"><table id="keys"></table></div>
+  </div>
+  <script src="/shared/icons.js"></script>
+  <script src="/common.js"></script>
+  <script src="/about.js"></script>
+</body>
+</html>

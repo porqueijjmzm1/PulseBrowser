@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Configurações</title>
+  <link rel="icon" href="/assets/icon.png">
+  <link rel="stylesheet" href="/common.css">
+  <link rel="stylesheet" href="/settings.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo" data-logo></span><span>Configurações</span></div>
+    <label class="search"><span data-icon="search"></span><input id="filter" type="search" placeholder="Pesquisar configurações"></label>
+  </header>
+
+  <div class="layout">
+    <nav class="sidenav" id="nav">
+      <a href="#appearance" data-icon="palette">Aparência</a>
+      <a href="#startup" data-icon="rocket">Ao iniciar e abas</a>
+      <a href="#search" data-icon="search">Pesquisa</a>
+      <a href="#shield" data-icon="shield">Pulse Shield</a>
+      <a href="#privacy" data-icon="lock">Privacidade e segurança</a>
+      <a href="#permissions" data-icon="key">Permissões de sites</a>
+      <a href="#downloads" data-icon="download">Downloads</a>
+      <a href="#performance" data-icon="zap">Desempenho</a>
+      <a href="#languages" data-icon="type">Idiomas</a>
+      <a href="#extensions" data-icon="puzzle">Extensões</a>
+      <a href="#default" data-icon="monitor">Navegador padrão</a>
+      <a href="pulse://about/" data-icon="info">Sobre o PulseBrowser</a>
+    </nav>
+
+    <main class="content" id="content">
+      <!-- Aparência -->
+      <section id="appearance">
+        <h2>Aparência</h2>
+        <div class="card">
+          <div class="setting" data-k="tema claro escuro">
+            <div class="text"><div class="title">Tema</div><div class="desc">Combina com o Windows ou escolha claro/escuro</div></div>
+            <div class="seg" data-seg="theme">
+              <button data-v="system" data-icon="monitor" data-size="15">Sistema</button>
+              <button data-v="light" data-icon="sun" data-size="15">Claro</button>
+              <button data-v="dark" data-icon="moon" data-size="15">Escuro</button>
+            </div>
+          </div>
+          <div class="setting" data-k="cor destaque">
+            <div class="text"><div class="title">Cor de destaque</div><div class="desc">Usada em botões, links e realces</div></div>
+            <div class="swatches" id="accents"></div>
+          </div>
+          <div class="setting" data-k="botão página inicial home">
+            <div class="text"><div class="title">Mostrar botão Página inicial</div></div>
+            <label class="switch"><input type="checkbox" data-setting="showHomeButton"></label>
+          </div>
+          <div class="setting" data-k="barra favoritos">
+            <div class="text"><div class="title">Mostrar barra de favoritos</div><div class="desc">Ctrl+Shift+B</div></div>
+            <label class="switch"><input type="checkbox" data-setting="showBookmarksBar"></label>
+          </div>
+          <div class="setting" data-k="nova aba fundo plano">
+            <div class="text"><div class="title">Plano de fundo da nova aba</div></div>
+            <select data-setting="newTabBackground">
+              <option value="aurora">Aurora</option><option value="sunset">Pôr do sol</option><option value="ocean">Oceano</option><option value="forest">Floresta</option><option value="mono">Neutro</option>
+            </select>
+          </div>
+          <div class="setting" data-k="atalhos nova aba sites">
+            <div class="text"><div class="title">Mostrar atalhos na nova aba</div><div class="desc">Sites que você visita com frequência</div></div>
+            <label class="switch"><input type="checkbox" data-setting="newTabShortcuts"></label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Ao iniciar -->
+      <section id="startup">
+        <h2>Ao iniciar e abas</h2>
+        <div class="card">
+          <div class="setting col" data-k="iniciar inicialização restaurar continuar">
+            <div class="text"><div class="title">Ao abrir o PulseBrowser</div></div>
+            <div class="radios">
+              <label><input type="radio" name="startup" value="newtab"> Abrir a página Nova aba</label>
+              <label><input type="radio" name="startup" value="restore"> Continuar de onde parei</label>
+              <label><input type="radio" name="startup" value="urls"> Abrir páginas específicas</label>
+            </div>
+            <textarea id="startup-urls" placeholder="Um endereço por linha, ex.: https://www.google.com" hidden></textarea>
+          </div>
+          <div class="setting" data-k="página inicial home">
+            <div class="text"><div class="title">Página inicial</div><div class="desc">Aberta pelo botão Página inicial (Alt+Home)</div></div>
+            <input class="input" style="max-width:320px" id="homepage" placeholder="pulse://newtab">
+          </div>
+          <div class="setting" data-k="fechar abas confirmar">
+            <div class="text"><div class="title">Confirmar ao fechar uma janela com várias abas</div></div>
+            <label class="switch"><input type="checkbox" data-setting="confirmCloseMultipleTabs"></label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Pesquisa -->
+      <section id="search">
+        <h2>Pesquisa</h2>
+        <div class="card">
+          <div class="setting" data-k="mecanismo pesquisa google bing duckduckgo">
+            <div class="text"><div class="title">Mecanismo de pesquisa da barra de endereço</div></div>
+            <select data-setting="searchEngine" id="engines"></select>
+          </div>
+          <div class="setting" data-k="sugestões pesquisa">
+            <div class="text"><div class="title">Mostrar sugestões de pesquisa</div><div class="desc">O que você digita na barra de endereço é enviado ao mecanismo de pesquisa para gerar sugestões</div></div>
+            <label class="switch"><input type="checkbox" data-setting="searchSuggestions"></label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Shield -->
+      <section id="shield">
+        <h2>Pulse Shield</h2>
+        <div class="card">
+          <div class="setting shield-hero" data-k="shield bloqueador anúncios rastreadores">
+            <div class="hero-icon" data-icon="shieldCheck" data-size="26"></div>
+            <div class="text"><div class="title">Bloquear anúncios, rastreadores e mineradores</div><div class="desc" id="shield-stats">—</div></div>
+            <label class="switch"><input type="checkbox" data-setting="shieldEnabled"></label>
+          </div>
+          <div class="setting" data-k="lista ampliada shield">
+            <div class="text"><div class="title">Usar lista ampliada</div><div class="desc">Baixa uma lista pública com milhares de domínios de anúncios (atualizada semanalmente)</div></div>
+            <button class="btn" id="shield-refresh">Atualizar agora</button>
+            <label class="switch"><input type="checkbox" data-setting="shieldExtendedList"></label>
+          </div>
+          <div class="setting col" data-k="sites permitidos exceções shield">
+            <div class="text"><div class="title">Sites sem bloqueio</div><div class="desc">O Shield fica desligado nesses sites</div></div>
+            <div id="allowlist" class="chips"></div>
+            <div class="row"><input class="input" id="allow-input" placeholder="exemplo.com"><button class="btn" id="allow-add">Adicionar</button></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Privacidade -->
+      <section id="privacy">
+        <h2>Privacidade e segurança</h2>
+        <div class="card">
+          <div class="setting" data-k="do not track gpc rastrear">
+            <div class="text"><div class="title">Pedir aos sites para não me rastrear</div><div class="desc">Envia os sinais "Do Not Track" e "Global Privacy Control"</div></div>
+            <label class="switch"><input type="checkbox" data-setting="doNotTrack"></label>
+          </div>
+          <div class="setting col" data-k="limpar dados navegação cookies cache histórico">
+            <div class="text"><div class="title">Limpar dados de navegação</div><div class="desc">Ctrl+Shift+Delete</div></div>
+            <div class="clear-grid">
+              <label><input type="checkbox" id="cl-history" checked> Histórico de navegação</label>
+              <label><input type="checkbox" id="cl-cookies" checked> Cookies e dados de sites</label>
+              <label><input type="checkbox" id="cl-cache" checked> Imagens e arquivos em cache</label>
+              <label><input type="checkbox" id="cl-downloads"> Lista de downloads</label>
+              <label><input type="checkbox" id="cl-permissions"> Permissões de sites</label>
+              <label><input type="checkbox" id="cl-passwords"> Logins HTTP salvos na sessão</label>
+            </div>
+            <div class="row">
+              <span class="muted">Período:</span>
+              <select id="cl-range">
+                <option value="hour">Última hora</option><option value="day">Últimas 24 horas</option><option value="week">Últimos 7 dias</option><option value="month">Últimas 4 semanas</option><option value="all" selected>Todo o período</option>
+              </select>
+              <div class="grow"></div>
+              <button class="btn primary" id="cl-go">Limpar dados</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Permissões -->
+      <section id="permissions">
+        <h2>Permissões de sites</h2>
+        <div class="card" id="perm-list"></div>
+      </section>
+
+      <!-- Downloads -->
+      <section id="downloads">
+        <h2>Downloads</h2>
+        <div class="card">
+          <div class="setting" data-k="pasta local downloads">
+            <div class="text"><div class="title">Local</div><div class="desc" id="dl-dir">—</div></div>
+            <button class="btn" id="dl-change">Alterar</button>
+          </div>
+          <div class="setting" data-k="perguntar salvar downloads">
+            <div class="text"><div class="title">Perguntar onde salvar cada arquivo</div></div>
+            <label class="switch"><input type="checkbox" data-setting="askDownload"></label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Desempenho -->
+      <section id="performance">
+        <h2>Desempenho</h2>
+        <div class="card">
+          <div class="setting" data-k="economia memória abas espera">
+            <div class="text"><div class="title">Economia de memória</div><div class="desc">Coloca em espera abas que você não usa há algum tempo. Elas recarregam quando você volta a elas.</div></div>
+            <select id="ms-minutes">
+              <option value="15">após 15 min</option><option value="30">após 30 min</option><option value="60">após 1 hora</option><option value="120">após 2 horas</option><option value="240">após 4 horas</option>
+            </select>
+            <label class="switch"><input type="checkbox" data-setting="memorySaver"></label>
+          </div>
+          <div class="setting" data-k="aceleração hardware gpu">
+            <div class="text"><div class="title">Usar aceleração de hardware quando disponível</div><div class="desc restart-note" hidden>Reinicie o PulseBrowser para aplicar</div></div>
+            <label class="switch"><input type="checkbox" data-setting="hardwareAcceleration" data-restart></label>
+          </div>
+          <div class="setting" data-k="rolagem suave scroll">
+            <div class="text"><div class="title">Rolagem suave</div><div class="desc restart-note" hidden>Reinicie o PulseBrowser para aplicar</div></div>
+            <label class="switch"><input type="checkbox" data-setting="smoothScrolling" data-restart></label>
+          </div>
+          <div class="setting" id="restart-row" hidden>
+            <div class="text"><div class="title">Algumas alterações exigem reinício</div></div>
+            <button class="btn primary" id="restart">Reiniciar agora</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Idiomas -->
+      <section id="languages">
+        <h2>Idiomas</h2>
+        <div class="card">
+          <div class="setting" data-k="corretor ortográfico ortografia">
+            <div class="text"><div class="title">Verificar ortografia ao digitar</div></div>
+            <label class="switch"><input type="checkbox" data-setting="spellcheck"></label>
+          </div>
+          <div class="setting col" data-k="idiomas dicionário">
+            <div class="text"><div class="title">Idiomas do corretor ortográfico</div></div>
+            <div class="clear-grid" id="langs"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Extensões -->
+      <section id="extensions">
+        <h2>Extensões <span class="beta">beta</span></h2>
+        <div class="card">
+          <div class="setting" data-k="extensões chrome carregar">
+            <div class="text"><div class="title">Carregar extensão descompactada</div><div class="desc">Suporte parcial a extensões do Chrome (Manifest V2/V3): scripts de conteúdo e páginas de opções funcionam; pop-ups da barra de ferramentas ainda não.</div></div>
+            <button class="btn" id="ext-load">Selecionar pasta</button>
+          </div>
+          <div id="ext-list"></div>
+        </div>
+      </section>
+
+      <!-- Navegador padrão -->
+      <section id="default">
+        <h2>Navegador padrão</h2>
+        <div class="card">
+          <div class="setting" data-k="navegador padrão default">
+            <div class="text"><div class="title">Tornar o PulseBrowser o navegador padrão</div><div class="desc">Registra o PulseBrowser no Windows e abre as configurações de Aplicativos padrão para você confirmar</div></div>
+            <button class="btn primary" id="make-default">Tornar padrão</button>
+          </div>
+        </div>
+      </section>
+      <div style="height:40vh"></div>
+    </main>
+  </div>
+
+  <script src="/shared/icons.js"></script>
+  <script src="/common.js"></script>
+  <script src="/settings.js"></script>
+</body>
+</html>
