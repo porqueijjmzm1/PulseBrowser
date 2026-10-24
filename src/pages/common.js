@@ -102,8 +102,12 @@
     }
     el.textContent = msg;
     el.hidden = false;
+    el.classList.remove('leaving');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.remove(), 2600);
+    toastTimer = setTimeout(() => {
+      el.classList.add('leaving');
+      toastTimer = setTimeout(() => el.remove(), 220);
+    }, 2600);
   }
 
   function applyAccent(color) {
@@ -115,9 +119,14 @@
     if (ctx.incognito) document.body.classList.add('incognito');
     const settings = await window.pulse.invoke('internal:get-settings');
     applyAccent(settings.accentColor);
+    const applyMotion = (st) => document.body.classList.toggle('no-anim', st.animations === false);
+    applyMotion(settings);
+    // Entrada em cascata do menu lateral e das seções.
+    $$('.sidenav, .content').forEach((box) => [...box.children].forEach((c, i) => c.style.setProperty('--i', String(Math.min(i, 8)))));
     window.pulse.on('internal:settings-changed', async () => {
       const s = await window.pulse.invoke('internal:get-settings');
       applyAccent(s.accentColor);
+      applyMotion(s);
       document.dispatchEvent(new CustomEvent('pulse-settings', { detail: s }));
     });
     $$('[data-logo]').forEach((el) => {

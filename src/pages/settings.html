@@ -20,6 +20,8 @@
       <a href="#search" data-icon="search">Pesquisa</a>
       <a href="#shield" data-icon="shield">Pulse Shield</a>
       <a href="#privacy" data-icon="lock">Privacidade e segurança</a>
+      <a href="#accounts" data-icon="user">Senhas e contas</a>
+      <a href="#grammar" data-icon="spellCheck">Corretor gramatical</a>
       <a href="#permissions" data-icon="key">Permissões de sites</a>
       <a href="#downloads" data-icon="download">Downloads</a>
       <a href="#performance" data-icon="zap">Desempenho</a>
@@ -45,6 +47,14 @@
           <div class="setting" data-k="cor destaque">
             <div class="text"><div class="title">Cor de destaque</div><div class="desc">Usada em botões, links e realces</div></div>
             <div class="swatches" id="accents"></div>
+          </div>
+          <div class="setting" data-k="animações movimento efeitos transições">
+            <div class="text"><div class="title">Animações</div><div class="desc">Efeitos suaves em abas, menus, botões e páginas</div></div>
+            <label class="switch"><input type="checkbox" data-setting="animations"></label>
+          </div>
+          <div class="setting" data-k="botão perfil conta google">
+            <div class="text"><div class="title">Mostrar botão de perfil</div><div class="desc">Mostra sua Conta do Google na barra de ferramentas</div></div>
+            <label class="switch"><input type="checkbox" data-setting="showProfileButton"></label>
           </div>
           <div class="setting" data-k="botão página inicial home">
             <div class="text"><div class="title">Mostrar botão Página inicial</div></div>
@@ -145,6 +155,7 @@
               <label><input type="checkbox" id="cl-downloads"> Lista de downloads</label>
               <label><input type="checkbox" id="cl-permissions"> Permissões de sites</label>
               <label><input type="checkbox" id="cl-passwords"> Logins HTTP salvos na sessão</label>
+              <label><input type="checkbox" id="cl-saved-passwords"> Senhas salvas</label>
             </div>
             <div class="row">
               <span class="muted">Período:</span>
@@ -154,6 +165,82 @@
               <div class="grow"></div>
               <button class="btn primary" id="cl-go">Limpar dados</button>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Senhas e contas -->
+      <section id="accounts">
+        <h2>Senhas e contas</h2>
+        <div class="card">
+          <div class="setting g-row" data-k="conta google login entrar gmail youtube drive sair">
+            <span class="g-avatar" id="g-avatar"></span>
+            <div class="text"><div class="title" id="g-title">Conta do Google</div><div class="desc" id="g-desc">Verificando...</div></div>
+            <div class="g-actions" id="g-actions"></div>
+          </div>
+          <div id="g-others"></div>
+          <div class="setting" data-k="compatibilidade login google navegador seguro bloqueado">
+            <div class="text"><div class="title">Modo de compatibilidade do login do Google</div><div class="desc">O Google às vezes recusa logins de navegadores que ele não conhece ("este navegador pode não ser seguro"). Com esta opção, só a página de login do Google vê o PulseBrowser como um navegador compatível.</div></div>
+            <label class="switch"><input type="checkbox" data-setting="googleCompat"></label>
+          </div>
+        </div>
+        <div class="card">
+          <div class="setting" data-k="senhas salvar oferecer gerenciador">
+            <div class="text"><div class="title">Oferecer para salvar senhas</div><div class="desc">As senhas ficam criptografadas com a sua conta do Windows</div></div>
+            <label class="switch"><input type="checkbox" data-setting="passwordManager"></label>
+          </div>
+          <div class="setting" data-k="preencher automaticamente login senhas sugerir">
+            <div class="text"><div class="title">Sugerir logins salvos</div><div class="desc">Mostra suas contas salvas ao clicar no campo de usuário ou senha</div></div>
+            <label class="switch"><input type="checkbox" data-setting="passwordAutofill"></label>
+          </div>
+          <div class="setting" data-k="gerenciar senhas salvas lista importar exportar verificar">
+            <div class="text"><div class="title">Senhas salvas</div><div class="desc" id="pw-count">—</div></div>
+            <a class="btn" href="pulse://passwords/"><span data-icon="key" data-size="16"></span>Gerenciar senhas</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Corretor -->
+      <section id="grammar">
+        <h2>Corretor gramatical</h2>
+        <div class="card">
+          <div class="setting shield-hero" data-k="corretor gramatical gramática grammarly ortografia revisão">
+            <div class="hero-icon" data-icon="spellCheck" data-size="26"></div>
+            <div class="text"><div class="title">Corrigir gramática e ortografia enquanto escrevo</div><div class="desc">Sublinha erros nas caixas de texto dos sites e sugere correções com um clique. O texto é enviado ao LanguageTool para ser verificado.</div></div>
+            <label class="switch"><input type="checkbox" data-setting="grammarEnabled"></label>
+          </div>
+          <div class="setting" data-k="idioma corretor língua texto">
+            <div class="text"><div class="title">Idioma do texto</div><div class="desc">"Detectar automaticamente" reconhece o idioma de cada texto</div></div>
+            <select data-setting="grammarLanguage" id="gr-lang"></select>
+          </div>
+          <div class="setting" data-k="língua materna nativa falsos cognatos">
+            <div class="text"><div class="title">Sua língua materna</div><div class="desc">Ajuda a encontrar falsos cognatos quando você escreve em outro idioma</div></div>
+            <select data-setting="grammarMotherTongue" id="gr-mother"></select>
+          </div>
+          <div class="setting" data-k="estilo sugestões repetição informal">
+            <div class="text"><div class="title">Sugestões de estilo</div><div class="desc">Palavras repetidas, linguagem informal e frases confusas (sublinhado na cor de destaque)</div></div>
+            <label class="switch"><input type="checkbox" data-setting="grammarStyle"></label>
+          </div>
+          <div class="setting" data-k="rigoroso exigente regras extras">
+            <div class="text"><div class="title">Modo rigoroso</div><div class="desc">Ativa regras extras, mais exigentes</div></div>
+            <label class="switch"><input type="checkbox" data-setting="grammarPicky"></label>
+          </div>
+          <div class="setting" data-k="correção automática digitação autocorreção">
+            <div class="text"><div class="title">Corrigir erros de digitação automaticamente</div><div class="desc">Troca palavras com erro óbvio assim que você termina de digitá-las (Ctrl+Z desfaz)</div></div>
+            <label class="switch"><input type="checkbox" data-setting="grammarAutoFix"></label>
+          </div>
+          <div class="setting col" data-k="dicionário pessoal palavras">
+            <div class="text"><div class="title">Dicionário pessoal</div><div class="desc">Palavras que o corretor nunca marca como erro</div></div>
+            <div id="gr-dict" class="chips" data-empty="Nenhuma palavra"></div>
+            <div class="row"><input class="input" id="gr-word" placeholder="Nova palavra" spellcheck="false"><button class="btn" id="gr-word-add">Adicionar</button></div>
+          </div>
+          <div class="setting col" data-k="sites desativados corretor exceções">
+            <div class="text"><div class="title">Sites sem corretor</div><div class="desc">Use "Desativar neste site" no botão do corretor para adicionar</div></div>
+            <div id="gr-sites" class="chips"></div>
+          </div>
+          <div class="setting" data-k="servidor languagetool próprio privacidade local">
+            <div class="text"><div class="title">Servidor LanguageTool próprio (opcional)</div><div class="desc">Para manter o texto no seu computador ou na sua empresa, ex.: http://localhost:8081. Deixe vazio para usar o serviço público.</div></div>
+            <input class="input" style="max-width:280px" id="gr-server" placeholder="https://api.languagetool.org" spellcheck="false">
           </div>
         </div>
       </section>

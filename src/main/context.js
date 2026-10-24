@@ -7,6 +7,9 @@ module.exports = {
   bookmarks: null,
   downloads: null,
   shield: null,
+  passwords: null,
+  accounts: null,
+  grammar: null,
   windows: [], // PulseWindow[]
   closedTabs: [], // pilha de abas fechadas (janelas normais)
   quitting: false,

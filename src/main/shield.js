@@ -139,12 +139,18 @@ class Shield {
       callback({ cancel: true });
     });
 
+    // Só pode haver um tratador de cabeçalhos por sessão: DNT/GPC e o modo de compatibilidade do Google ficam aqui.
     ses.webRequest.onBeforeSendHeaders((details, callback) => {
+      const headers = details.requestHeaders;
       if (ctx.settings.get('doNotTrack')) {
-        details.requestHeaders.DNT = '1';
-        details.requestHeaders['Sec-GPC'] = '1';
+        headers.DNT = '1';
+        headers['Sec-GPC'] = '1';
       }
-      callback({ requestHeaders: details.requestHeaders });
+      if (ctx.accounts && ctx.settings.get('googleCompat') && hostOf(details.url) === 'accounts.google.com') {
+        headers['User-Agent'] = ctx.accounts.firefoxUA;
+        for (const k of Object.keys(headers)) if (/^sec-ch-ua/i.test(k)) delete headers[k];
+      }
+      callback({ requestHeaders: headers });
     });
   }
 

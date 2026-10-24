@@ -50,10 +50,14 @@
   // Atalhos (sites mais visitados).
   function renderTiles(list) {
     const box = $('#tiles');
+    // Atalhos que já estavam na tela não repetem a animação de entrada.
+    const shown = new Set([...box.querySelectorAll('.tile')].map((t) => t.dataset.url));
     box.textContent = '';
-    for (const site of list) {
+    list.forEach((site, i) => {
       const a = document.createElement('a');
-      a.className = 'tile';
+      a.className = shown.has(site.url) ? 'tile static' : 'tile';
+      a.dataset.url = site.url;
+      a.style.setProperty('--i', String(shown.size ? 0 : i));
       a.href = site.url;
       a.title = `${site.title || ''}\n${site.url}`;
       a.appendChild(favicon(site.url, site.favicon, 44));
@@ -68,11 +72,13 @@
       rm.addEventListener('click', async (e) => {
         e.preventDefault();
         e.stopPropagation();
-        renderTiles(await window.pulse.invoke('internal:top-sites-remove', site.url));
+        a.classList.add('removing');
+        const next = await window.pulse.invoke('internal:top-sites-remove', site.url);
+        setTimeout(() => renderTiles(next), document.body.classList.contains('no-anim') ? 0 : 240);
       });
       a.appendChild(rm);
       box.appendChild(a);
-    }
+    });
   }
 
   if (ctx.incognito) {
@@ -100,12 +106,26 @@
     b.addEventListener('click', () => window.pulse.invoke('internal:set-setting', 'newTabBackground', id));
     choices.appendChild(b);
   }
-  $('#customize-btn').addEventListener('click', () => {
-    $('#customize').hidden = !$('#customize').hidden;
-  });
-  $('#customize-close').addEventListener('click', () => {
-    $('#customize').hidden = true;
-  });
+  let closeTimer = null;
+  function toggleCustomize(open) {
+    const panel = $('#customize');
+    clearTimeout(closeTimer);
+    if (open) {
+      panel.hidden = false;
+      panel.classList.remove('closing', 'opening');
+      void panel.offsetWidth;
+      panel.classList.add('opening');
+    } else if (!panel.hidden) {
+      panel.classList.remove('opening');
+      panel.classList.add('closing');
+      closeTimer = setTimeout(() => {
+        panel.hidden = true;
+        panel.classList.remove('closing');
+      }, document.body.classList.contains('no-anim') ? 0 : 160);
+    }
+  }
+  $('#customize-btn').addEventListener('click', () => toggleCustomize($('#customize').hidden || $('#customize').classList.contains('closing')));
+  $('#customize-close').addEventListener('click', () => toggleCustomize(false));
   $('#opt-shortcuts').addEventListener('change', (e) => window.pulse.invoke('internal:set-setting', 'newTabShortcuts', e.target.checked));
   $('#restore-tiles').addEventListener('click', async () => renderTiles(await window.pulse.invoke('internal:top-sites-reset')));
 

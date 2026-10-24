@@ -36,7 +36,7 @@
 
   const WIDTHS = {
     suggestions: null, menu: 300, downloads: 380, shield: 330, pageinfo: 350, bookmark: 340,
-    permission: 380, auth: 380, screenshare: 660, zoom: 260,
+    permission: 380, auth: 380, screenshare: 660, zoom: 260, password: 370, 'site-passwords': 350, profile: 340,
   };
   const CENTERED = new Set(['auth', 'screenshare']);
 
@@ -56,6 +56,37 @@
     popup.style.left = `${Math.round(left)}px`;
     popup.style.top = CENTERED.has(type) ? '40px' : type === 'suggestions' ? '4px' : '6px';
     popup.style.maxHeight = `${Math.max(120, window.innerHeight - (CENTERED.has(type) ? 60 : 20))}px`;
+    // A animação nasce do botão que abriu o pop-up.
+    const originX = Math.max(0, Math.min(width, (a.left + (a.width || 0) / 2) - left));
+    popup.style.transformOrigin = CENTERED.has(type) ? 'center top' : `${Math.round(originX)}px top`;
+  }
+
+  // Atraso em cascata para os itens dos pop-ups.
+  function stagger(root = popup, selector = '.stagger > *') {
+    root.querySelectorAll(selector).forEach((el, i) => el.style.setProperty('--i', String(Math.min(i, 14))));
+  }
+
+  function letterAvatar(label, cls = '') {
+    const clean = String(label || '?').trim();
+    let h = 0;
+    for (const ch of clean) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    return `<span class="avatar ${cls}" style="background:hsl(${h % 360} 55% 50%)">${esc((clean[0] || '?').toUpperCase())}</span>`;
+  }
+
+  function photoAvatar(account, cls = '') {
+    if (!account.photo) return letterAvatar(account.name || account.email, cls);
+    return `<span class="avatar photo ${cls}"><img src="${esc(account.photo)}" alt="" referrerpolicy="no-referrer" data-letter="${esc((account.name || account.email || '?')[0].toUpperCase())}"></span>`;
+  }
+
+  function fixAvatars(root) {
+    root.querySelectorAll('.avatar.photo img').forEach((img) => {
+      img.addEventListener('error', () => {
+        const parent = img.parentElement;
+        parent.classList.remove('photo');
+        parent.style.background = 'var(--accent)';
+        parent.textContent = img.dataset.letter || '?';
+      }, { once: true });
+    });
   }
 
   // ---------------------------------------------------------------- Renderizadores
@@ -128,6 +159,7 @@
       { icon: 'clock', label: 'Histórico', key: 'Ctrl+H', cmd: 'history' },
       { icon: 'download', label: 'Downloads', key: 'Ctrl+J', cmd: 'downloads' },
       { icon: 'bookmark', label: 'Favoritos', key: 'Ctrl+Shift+O', cmd: 'bookmarks' },
+      { icon: 'key', label: 'Senhas', cmd: 'passwords' },
       { icon: 'refreshCcw', label: 'Reabrir aba fechada', key: 'Ctrl+Shift+T', cmd: 'reopen-closed', disabled: !d.hasClosed },
       'sep',
       'zoom',
@@ -145,7 +177,8 @@
       'sep',
       { icon: 'exit', label: 'Sair', cmd: 'quit' },
     ];
-    popup.innerHTML = `<div class="menu">${items.map(menuItem).join('')}</div>`;
+    popup.innerHTML = `<div class="menu stagger">${items.map(menuItem).join('')}</div>`;
+    stagger();
     popup.querySelectorAll('[data-cmd]').forEach((b) => b.addEventListener('click', () => {
       act({ act: 'command', cmd: b.dataset.cmd, keepOpen: !!b.dataset.keep });
     }));
@@ -366,7 +399,121 @@
     popup.querySelectorAll('[data-zoom]').forEach((b) => b.addEventListener('click', () => act({ act: 'zoom', dir: Number(b.dataset.zoom) })));
   }
 
+  // ---------------------------------------------------------------- Senhas
+  function renderPassword(d) {
+    popup.innerHTML = `<div class="pad pw-prompt stagger">
+      <div class="pw-head"><div class="pw-badge">${icon('key', 20)}</div>
+        <div class="pw-title"><h3>${d.update ? 'Atualizar senha?' : 'Salvar senha?'}</h3><div class="muted small">${esc(d.host)}</div></div></div>
+      <label class="field"><span>Nome de usuário</span><input id="pw-user" value="${esc(d.username)}" placeholder="(sem nome de usuário)" spellcheck="false" autocomplete="off"></label>
+      <label class="field"><span>Senha</span><span class="pw-wrap"><input id="pw-pass" type="password" value="${esc(d.password)}" spellcheck="false" autocomplete="off"><button class="icon-btn" id="pw-eye" title="Mostrar senha">${icon('eye', 16)}</button></span></label>
+      <p class="muted small pw-note">${icon('lock', 13)}<span>As senhas ficam criptografadas neste computador.</span></p>
+      <div class="row-end">
+        ${d.update ? '<button class="btn" id="pw-later">Agora não</button>' : '<button class="btn" id="pw-never">Nunca para este site</button>'}
+        <button class="btn primary" id="pw-save">${d.update ? 'Atualizar' : 'Salvar'}</button>
+      </div></div>`;
+    stagger();
+    const user = $('#pw-user');
+    const pass = $('#pw-pass');
+    const eye = $('#pw-eye');
+    eye.addEventListener('click', (e) => {
+      e.preventDefault();
+      const show = pass.type === 'password';
+      pass.type = show ? 'text' : 'password';
+      eye.innerHTML = icon(show ? 'eyeOff' : 'eye', 16);
+      eye.title = show ? 'Ocultar senha' : 'Mostrar senha';
+    });
+    const save = () => act({ act: 'password-response', choice: 'save', username: user.value, password: pass.value });
+    $('#pw-save').addEventListener('click', save);
+    $('#pw-never')?.addEventListener('click', () => act({ act: 'password-response', choice: 'never' }));
+    $('#pw-later')?.addEventListener('click', () => act({ act: 'password-response', choice: 'dismiss' }));
+    popup.querySelectorAll('input').forEach((i) => i.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') save();
+    }));
+    setTimeout(() => $('#pw-save').focus(), 30);
+  }
+
+  function renderSitePasswords(d) {
+    const rows = d.accounts.map((a) => `<div class="sp-row" data-id="${esc(a.id)}">
+        ${letterAvatar(a.username || d.host)}
+        <div class="sp-main"><div class="sp-user">${esc(a.username || '(sem nome de usuário)')}</div><div class="sp-pass">••••••••••</div></div>
+        <button class="icon-btn" data-a="user" title="Copiar nome de usuário">${icon('user', 15)}</button>
+        <button class="icon-btn" data-a="pass" title="Copiar senha">${icon('copy', 15)}</button>
+        <button class="btn small-btn" data-a="fill" title="Preencher o formulário desta página">Preencher</button>
+      </div>`).join('');
+    popup.innerHTML = `<div class="sp-head">${icon('key', 18)}<div><b>Senhas salvas</b><div class="muted small">${esc(d.host)}</div></div></div>
+      <div class="sp-list stagger">${rows || '<div class="empty">Nenhuma senha salva para este site</div>'}</div>
+      <div class="dl-foot"><button class="mi" id="sp-manage">${icon('settings', 16)}<span class="lbl">Gerenciar senhas</span></button></div>`;
+    stagger();
+    popup.querySelectorAll('.sp-row').forEach((row) => {
+      row.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-a]');
+        if (!btn) return;
+        const id = row.dataset.id;
+        if (btn.dataset.a === 'fill') {
+          act({ act: 'pw-fill', id });
+          return;
+        }
+        act({ act: 'pw-copy', id, field: btn.dataset.a === 'pass' ? 'password' : 'username' });
+        btn.classList.add('done');
+        btn.innerHTML = icon('check', 15);
+        btn.title = 'Copiado';
+        setTimeout(() => {
+          btn.classList.remove('done');
+          btn.innerHTML = icon(btn.dataset.a === 'pass' ? 'copy' : 'user', 15);
+        }, 1400);
+      });
+    });
+    $('#sp-manage').addEventListener('click', () => act({ act: 'command', cmd: 'passwords' }));
+  }
+
+  // ---------------------------------------------------------------- Perfil (contas do Google)
+  function renderProfile(d) {
+    const accounts = (d.accounts || []).filter((a) => !a.signedOut);
+    const primary = accounts[0];
+    const footer = `<div class="sep"></div>
+      ${primary ? `<button class="mi" data-g="add">${icon('userPlus', 16)}<span class="lbl">Adicionar outra conta</span></button>` : ''}
+      <button class="mi" data-cmd="passwords">${icon('key', 16)}<span class="lbl">Senhas</span><span class="key">${d.passwordManager ? d.passwords : 'Desativado'}</span></button>
+      <button class="mi" data-cmd="settings" data-arg="accounts">${icon('settings', 16)}<span class="lbl">Configurações de contas e senhas</span></button>
+      ${primary ? `<button class="mi" data-g="signout">${icon('exit', 16)}<span class="lbl">Sair de todas as contas</span></button>` : ''}`;
+    if (!primary) {
+      popup.innerHTML = `<div class="pf stagger">
+        <div class="pf-hero">
+          <div class="pf-ring guest"><span class="avatar big guest">${icon('user', 30)}</span></div>
+          <div class="pf-name">Você não está conectado</div>
+          <p class="muted small pf-text">Entre com sua Conta do Google para usar Gmail, YouTube, Drive e outros serviços. Suas senhas ficam salvas no PulseBrowser.</p>
+          <button class="btn primary pf-cta" data-g="signin">Fazer login com o Google</button>
+        </div>
+        <div class="pf-menu">${footer}</div></div>`;
+    } else {
+      const others = accounts.slice(1).map((a) => `<button class="pf-acc" data-g="manage" data-i="${a.index}">
+          ${photoAvatar(a)}<span class="pf-acc-txt"><b>${esc(a.name)}</b><span>${esc(a.email)}</span></span></button>`).join('');
+      const apps = [['gmail', 'mail', 'Gmail'], ['drive', 'folder', 'Drive'], ['calendar', 'calendar', 'Agenda'], ['youtube', 'playCircle', 'YouTube']]
+        .map(([page, ic, label]) => `<button class="pf-app" data-g="${page}" data-i="${primary.index}">${icon(ic, 18)}<span>${label}</span></button>`).join('');
+      popup.innerHTML = `<div class="pf stagger">
+        <div class="pf-hero">
+          <div class="pf-ring">${photoAvatar(primary, 'big')}</div>
+          <div class="pf-name">Olá, ${esc(primary.name.split(' ')[0])}!</div>
+          <div class="muted small">${esc(primary.email)}</div>
+          <button class="btn pf-cta" data-g="manage" data-i="${primary.index}">Gerenciar sua Conta do Google</button>
+        </div>
+        <div class="pf-apps">${apps}</div>
+        ${others ? `<div class="pi-section pf-sec">Outras contas</div><div class="pf-others">${others}</div>` : ''}
+        <div class="pf-menu">${footer}</div></div>`;
+    }
+    fixAvatars(popup);
+    stagger();
+    popup.querySelectorAll('[data-g]').forEach((b) => b.addEventListener('click', () => {
+      act({ act: 'google', page: b.dataset.g, index: Number(b.dataset.i || 0) });
+    }));
+    popup.querySelectorAll('[data-cmd]').forEach((b) => b.addEventListener('click', () => {
+      act({ act: 'command', cmd: b.dataset.cmd, arg: b.dataset.arg });
+    }));
+  }
+
   const RENDER = {
+    password: renderPassword,
+    'site-passwords': renderSitePasswords,
+    profile: renderProfile,
     suggestions: renderSuggestions,
     menu: renderMenu,
     downloads: renderDownloads,
@@ -385,17 +532,31 @@
     if (!fn) return;
     if (current.accent) document.documentElement.style.setProperty('--accent', current.accent);
     // Atualizações de formulários não devem apagar o que o usuário está digitando.
-    if (isUpdate && ['bookmark', 'auth', 'permission', 'screenshare'].includes(current.type)) return;
+    if (isUpdate && ['bookmark', 'auth', 'permission', 'screenshare', 'password'].includes(current.type)) return;
+    clearTimeout(leaveTimer);
     const scroll = popup.scrollTop;
-    popup.className = `popup-${current.type}`;
+    popup.className = `popup-${current.type}${isUpdate ? ' updated' : ''}${current.align === 'right' ? ' from-right' : ''}`;
     fn(current.data || {});
     popup.hidden = false;
     backdrop.hidden = false;
     backdrop.classList.toggle('dim', CENTERED.has(current.type));
     position();
-    if (isUpdate) popup.scrollTop = scroll;
-    else popup.style.animation = current.type === 'suggestions' ? 'none' : '';
+    if (isUpdate) {
+      popup.scrollTop = scroll;
+    } else if (current.type !== 'suggestions') {
+      // Reinicia a animação de entrada (mesmo se o pop-up anterior ainda estava saindo).
+      popup.style.animation = 'none';
+      void popup.offsetWidth;
+      popup.style.animation = '';
+    }
     if (!isUpdate && current.type === 'menu') setTimeout(() => popup.querySelector('.mi')?.focus({ preventScroll: true }), 10);
+  }
+
+  let leaveTimer = null;
+  function clearPopup() {
+    popup.hidden = true;
+    popup.classList.remove('leaving');
+    popup.innerHTML = '';
   }
 
   backdrop.addEventListener('mousedown', () => act({ act: 'close' }));
@@ -422,11 +583,19 @@
     if (p.anchor) current.anchor = p.anchor;
     render(true);
   });
-  window.pulse.on('overlay:hide', () => {
+  window.pulse.on('overlay:hide', (opts) => {
     current = null;
-    popup.hidden = true;
     backdrop.hidden = true;
-    popup.innerHTML = '';
+    clearTimeout(leaveTimer);
+    if (opts && opts.animate && !popup.hidden && !document.body.classList.contains('no-anim')) {
+      popup.classList.add('leaving');
+      leaveTimer = setTimeout(clearPopup, 105);
+    } else {
+      clearPopup();
+    }
+  });
+  window.pulse.on('overlay:settings', (s) => {
+    document.body.classList.toggle('no-anim', !!s && s.animations === false);
   });
   window.pulse.on('overlay:status', (text) => {
     if (current) return;
@@ -439,9 +608,13 @@
       return;
     }
     if (current) return;
+    clearTimeout(leaveTimer);
+    clearPopup();
     statusEl.hidden = true;
-    toastEl.querySelector('.t-icon').innerHTML = icon('check', 16);
+    toastEl.querySelector('.t-icon').innerHTML = icon(/senha/i.test(text) ? 'key' : 'check', 16);
     toastEl.querySelector('.t-text').textContent = text;
+    toastEl.hidden = true;
+    void toastEl.offsetWidth;
     toastEl.hidden = false;
   });
 })();

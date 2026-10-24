@@ -196,6 +196,7 @@ function register() {
     engines: Object.entries(ENGINES).map(([id, e]) => ({ id, name: e.name })),
     accents: ACCENTS,
     downloadDirResolved: ctx.downloads.downloadDir(),
+    grammarLanguages: require('./grammar').LANGUAGES,
   }));
 
   internal('internal:set-setting', (_c, key, value) => {
@@ -303,7 +304,90 @@ function register() {
     }
     if (opts.permissions) ctx.settings.set('sitePermissions', {});
     if (opts.passwords) await ses.clearAuthCache();
+    if (opts.savedPasswords) ctx.passwords.clear();
     return true;
+  });
+
+  // ---- Senhas salvas (pulse://passwords)
+  internal('internal:passwords-list', () => ({
+    logins: ctx.passwords.list(),
+    never: ctx.passwords.neverList(),
+    encrypted: ctx.passwords.encryptionAvailable(),
+  }));
+  internal('internal:passwords-reveal', (_c, id) => ctx.passwords.password(String(id)));
+  internal('internal:passwords-copy', (_c, id, field) => {
+    const login = ctx.passwords.get(String(id));
+    if (!login) return false;
+    clipboard.writeText(field === 'password' ? ctx.passwords.password(login.id) : login.username);
+    return true;
+  });
+  internal('internal:passwords-save', (_c, data = {}) => {
+    let origin = String(data.origin || '').trim();
+    if (origin && !/^[a-z]+:\/\//i.test(origin)) origin = `https://${origin}`;
+    return ctx.passwords.save({ origin, username: String(data.username || ''), password: String(data.password || ''), note: data.note });
+  });
+  internal('internal:passwords-update', (_c, id, changes = {}) => ctx.passwords.update(String(id), {
+    origin: typeof changes.origin === 'string' && changes.origin.trim()
+      ? (/^[a-z]+:\/\//i.test(changes.origin.trim()) ? changes.origin.trim() : `https://${changes.origin.trim()}`)
+      : undefined,
+    username: typeof changes.username === 'string' ? changes.username : undefined,
+    password: typeof changes.password === 'string' ? changes.password : undefined,
+    note: typeof changes.note === 'string' ? changes.note : undefined,
+  }));
+  internal('internal:passwords-remove', (_c, id) => ctx.passwords.remove(String(id)));
+  internal('internal:passwords-never-remove', (_c, key) => {
+    ctx.passwords.removeNever(String(key));
+    return true;
+  });
+  internal('internal:passwords-health', () => ctx.passwords.health());
+  internal('internal:passwords-leaks', async () => {
+    try {
+      return { ok: true, leaked: await ctx.passwords.checkLeaks() };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
+  internal('internal:passwords-import', async ({ window }) => {
+    const res = await dialog.showOpenDialog(window?.win, {
+      title: 'Importar senhas (CSV)',
+      filters: [{ name: 'Arquivo CSV', extensions: ['csv'] }],
+      properties: ['openFile'],
+    });
+    if (res.canceled || !res.filePaths[0]) return null;
+    try {
+      const text = await fs.promises.readFile(res.filePaths[0], 'utf8');
+      return { ok: true, ...ctx.passwords.importCsv(text) };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
+  internal('internal:passwords-export', async ({ window }) => {
+    const parent = window?.win;
+    const { response } = await dialog.showMessageBox(parent, {
+      type: 'warning',
+      buttons: ['Exportar', 'Cancelar'],
+      defaultId: 1,
+      cancelId: 1,
+      title: 'Exportar senhas',
+      message: 'Exportar senhas sem criptografia?',
+      detail: 'O arquivo CSV terá todas as suas senhas em texto simples. Qualquer pessoa com acesso a ele poderá vê-las.',
+    });
+    if (response !== 0) return false;
+    const res = await dialog.showSaveDialog(parent, {
+      title: 'Exportar senhas',
+      defaultPath: path.join(app.getPath('documents'), 'senhas-pulsebrowser.csv'),
+      filters: [{ name: 'Arquivo CSV', extensions: ['csv'] }],
+    });
+    if (res.canceled || !res.filePath) return false;
+    await fs.promises.writeFile(res.filePath, `﻿${ctx.passwords.exportCsv()}`, 'utf8');
+    return true;
+  });
+
+  // ---- Contas do Google
+  internal('internal:accounts', () => ctx.accounts.publicData());
+  internal('internal:accounts-refresh', () => ctx.accounts.refresh());
+  internal('internal:google', ({ window }, page, index) => {
+    if (window && typeof page === 'string') window.openGoogle(page, index);
   });
 
   internal('internal:site-permissions', () => {
@@ -375,7 +459,7 @@ function register() {
   });
 
   internal('internal:command', ({ window }, cmd, arg) => {
-    const allowed = new Set(['new-tab', 'new-window', 'new-incognito', 'settings', 'history', 'downloads', 'bookmarks', 'about', 'focus-omnibox']);
+    const allowed = new Set(['new-tab', 'new-window', 'new-incognito', 'settings', 'history', 'downloads', 'bookmarks', 'about', 'focus-omnibox', 'passwords']);
     if (window && allowed.has(cmd)) window.command(cmd, arg);
   });
 }

@@ -1,7 +1,7 @@
 {
   "name": "pulsebrowser",
   "productName": "PulseBrowser",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "PulseBrowser - navegador rápido e privado baseado em Chromium",
   "main": "src/main/main.js",
   "author": "PulseBrowser",

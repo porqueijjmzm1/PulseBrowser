@@ -13,6 +13,9 @@
   $('#accents').innerHTML = Object.entries(s.accents)
     .map(([id, c]) => `<button class="swatch" data-accent="${esc(id)}" title="${esc(ACCENT_NAMES[id] || id)}" style="background:${esc(c)}"></button>`).join('');
   $$('#accents .swatch').forEach((b) => b.addEventListener('click', () => set('accent', b.dataset.accent)));
+  const langOptions = (list) => list.map((l) => `<option value="${esc(l.code)}">${esc(l.name)}</option>`).join('');
+  $('#gr-lang').innerHTML = langOptions(s.grammarLanguages || []);
+  $('#gr-mother').innerHTML = `<option value="">Não informar</option>${langOptions((s.grammarLanguages || []).filter((l) => l.code !== 'auto'))}`;
 
   $$('[data-setting]').forEach((el) => {
     el.addEventListener('change', () => {
@@ -53,8 +56,135 @@
     $('#ms-minutes').value = String(s.memorySaverMinutes);
     $('#ms-minutes').disabled = !s.memorySaver;
     $('#dl-dir').textContent = s.downloadDirResolved;
+    if (document.activeElement !== $('#gr-server')) $('#gr-server').value = s.grammarServer || '';
+    $$('#grammar .setting').forEach((row) => {
+      if (!row.querySelector('[data-setting="grammarEnabled"]')) row.classList.toggle('dim', !s.grammarEnabled);
+    });
     renderAllowlist();
+    renderChips('#gr-dict', s.grammarDictionary || [], (w) => set('grammarDictionary', s.grammarDictionary.filter((x) => x !== w)));
+    renderChips('#gr-sites', s.grammarDisabledSites || [], (h) => set('grammarDisabledSites', s.grammarDisabledSites.filter((x) => x !== h)));
   }
+
+  function renderChips(sel, items, onRemove) {
+    const box = $(sel);
+    const prev = new Set([...box.querySelectorAll('.chip')].map((c) => c.dataset.v));
+    box.textContent = '';
+    for (const v of items) {
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.dataset.v = v;
+      if (prev.has(v)) chip.style.animation = 'none';
+      chip.appendChild(document.createTextNode(v));
+      const rm = document.createElement('button');
+      rm.className = 'icon-btn';
+      rm.title = 'Remover';
+      rm.innerHTML = icon('x', 13);
+      rm.addEventListener('click', () => onRemove(v));
+      chip.appendChild(rm);
+      box.appendChild(chip);
+    }
+  }
+
+  // ---------------------------------------------------------------- Corretor gramatical
+  $('#gr-word-add').addEventListener('click', () => {
+    const w = $('#gr-word').value.trim();
+    if (!w || /\s/.test(w)) {
+      toast('Digite uma única palavra');
+      return;
+    }
+    const list = s.grammarDictionary || [];
+    if (!list.some((x) => x.toLowerCase() === w.toLowerCase())) set('grammarDictionary', [...list, w].sort((a, b) => a.localeCompare(b)));
+    $('#gr-word').value = '';
+  });
+  $('#gr-word').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') $('#gr-word-add').click();
+  });
+  $('#gr-server').addEventListener('change', (e) => {
+    let v = e.target.value.trim().replace(/\/+$/, '');
+    if (v && !/^https?:\/\//i.test(v)) v = `http://${v}`;
+    e.target.value = v;
+    set('grammarServer', v);
+  });
+
+  // ---------------------------------------------------------------- Contas do Google e senhas
+  function gAvatar(a, cls = '') {
+    const box = document.createElement('span');
+    box.className = `g-avatar ${cls}`;
+    const letter = () => {
+      box.textContent = ((a.name || a.email || '?').trim()[0] || '?').toUpperCase();
+      box.style.background = window.Pulse.colorFor(a.name || a.email);
+    };
+    if (a.photo) {
+      const img = new Image();
+      img.alt = '';
+      img.referrerPolicy = 'no-referrer';
+      img.onerror = () => {
+        img.remove();
+        letter();
+      };
+      img.src = a.photo;
+      box.appendChild(img);
+    } else {
+      letter();
+    }
+    return box;
+  }
+
+  function gButton(label, page, index, primary = false) {
+    const b = document.createElement('button');
+    b.className = `btn${primary ? ' primary' : ''}`;
+    b.textContent = label;
+    b.addEventListener('click', () => window.pulse.invoke('internal:google', page, index));
+    return b;
+  }
+
+  function renderAccounts(data) {
+    const accounts = (data?.accounts || []).filter((a) => !a.signedOut);
+    const primary = accounts[0];
+    const av = $('#g-avatar');
+    const actions = $('#g-actions');
+    actions.textContent = '';
+    if (primary) {
+      av.replaceWith(Object.assign(gAvatar(primary, 'signed'), { id: 'g-avatar' }));
+      $('#g-title').textContent = primary.name || primary.email;
+      $('#g-desc').textContent = primary.name ? primary.email : 'Conectado ao Google';
+      actions.append(gButton('Gerenciar sua Conta do Google', 'manage', primary.index), gButton('Adicionar conta', 'add'), gButton('Sair', 'signout'));
+    } else {
+      const empty = document.createElement('span');
+      empty.className = 'g-avatar empty';
+      empty.id = 'g-avatar';
+      empty.innerHTML = icon('user', 22);
+      av.replaceWith(empty);
+      $('#g-title').textContent = 'Conta do Google';
+      $('#g-desc').textContent = 'Você não está conectado. Entre para usar Gmail, YouTube, Drive e outros serviços do Google.';
+      actions.append(gButton('Fazer login com o Google', 'signin', undefined, true));
+    }
+    const others = $('#g-others');
+    others.textContent = '';
+    accounts.slice(1).forEach((a) => {
+      const row = document.createElement('div');
+      row.className = 'g-other';
+      row.appendChild(gAvatar(a));
+      const who = document.createElement('div');
+      who.className = 'who';
+      who.innerHTML = `<div>${esc(a.name || a.email)}</div><div class="muted small">${esc(a.name ? a.email : '')}</div>`;
+      row.appendChild(who);
+      row.appendChild(gButton('Gerenciar', 'manage', a.index));
+      others.appendChild(row);
+    });
+  }
+
+  async function renderPasswordCount() {
+    try {
+      const { logins } = await window.pulse.invoke('internal:passwords-list');
+      const n = logins.length;
+      $('#pw-count').textContent = n ? `${n} ${n === 1 ? 'senha salva' : 'senhas salvas'} neste computador` : 'Nenhuma senha salva ainda';
+    } catch {
+      $('#pw-count').textContent = '—';
+    }
+  }
+  window.pulse.on('internal:accounts-changed', (data) => renderAccounts(data));
+  window.pulse.on('internal:passwords-changed', () => renderPasswordCount());
 
   // ---------------------------------------------------------------- Shield
   async function renderShieldStats() {
@@ -115,12 +245,14 @@
       downloads: $('#cl-downloads').checked,
       permissions: $('#cl-permissions').checked,
       passwords: $('#cl-passwords').checked,
+      savedPasswords: $('#cl-saved-passwords').checked,
       range: $('#cl-range').value,
     };
     if (!Object.entries(opts).some(([k, v]) => k !== 'range' && v)) {
       toast('Selecione o que deseja limpar');
       return;
     }
+    if (opts.savedPasswords && !window.confirm('Apagar todas as senhas salvas? Isso não pode ser desfeito.')) return;
     $('#cl-go').disabled = true;
     try {
       await window.pulse.invoke('internal:clear-data', opts);
@@ -256,10 +388,27 @@
     renderShieldStats();
   });
 
+  // Ao clicar no menu lateral, a seção escolhida pisca de leve.
+  links.forEach((a) => a.addEventListener('click', () => {
+    const sec = document.querySelector(a.getAttribute('href'));
+    if (!sec) return;
+    sec.classList.remove('flash');
+    void sec.offsetWidth;
+    sec.classList.add('flash');
+  }));
+
   fill();
   renderShieldStats();
   renderPerms();
   renderLangs();
   renderExts();
-  if (location.hash) document.querySelector(location.hash)?.scrollIntoView();
+  renderPasswordCount();
+  window.pulse.invoke('internal:accounts').then(renderAccounts).catch(() => renderAccounts(null));
+  if (location.hash) {
+    const target = document.querySelector(location.hash);
+    if (target) {
+      target.scrollIntoView();
+      target.classList.add('flash');
+    }
+  }
 })();

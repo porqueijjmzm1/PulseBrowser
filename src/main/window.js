@@ -20,8 +20,9 @@ const ICON = path.join(__dirname, '..', 'assets', process.platform === 'win32' ?
 const isMac = process.platform === 'darwin';
 const TITLEBAR_HEIGHT = 40;
 const ZOOM_STEPS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5];
-const PROMPT_TYPES = new Set(['permission', 'auth', 'screenshare']);
-const SINGLETON_PAGES = new Set(['settings', 'history', 'downloads', 'bookmarks', 'about']);
+const PROMPT_TYPES = new Set(['permission', 'auth', 'screenshare', 'password']);
+const SINGLETON_PAGES = new Set(['settings', 'history', 'downloads', 'bookmarks', 'about', 'passwords']);
+const POPUP_EXIT_MS = 110;
 
 let nextWindowId = 1;
 
@@ -109,6 +110,7 @@ class PulseWindow {
     const query = { incognito: this.incognito ? '1' : '0', platform: process.platform };
     this.win.loadFile(path.join(UI_DIR, 'index.html'), { query });
     this.overlay.webContents.loadFile(path.join(UI_DIR, 'overlay.html'), { query });
+    this._sendOverlay('overlay:settings', { animations: ctx.settings.get('animations') });
 
     this._bindWindow();
     ctx.windows.push(this);
@@ -294,6 +296,7 @@ class PulseWindow {
     this.sendUI('ui:settings', ctx.settings.publicData());
     this.sendUI('ui:bookmarks', this.bookmarksBarData());
     this.sendUI('ui:downloads', ctx.downloads.summary());
+    if (!this.incognito) this.sendUI('ui:account', ctx.accounts.publicData());
     this.sendUI('ui:window-state', this.windowState());
     this._sendTabs();
     if (this.activeTab?.isNewTab) setTimeout(() => this.focusOmnibox(), 50);
@@ -743,11 +746,19 @@ class PulseWindow {
     this.popup = null;
     if (p.onDismiss) p.onDismiss();
     const hadFocus = !this.overlay.webContents.isDestroyed() && this.overlay.webContents.isFocused();
-    this._sendOverlay('overlay:hide');
-    this.overlay.setVisible(false);
+    // Animação de saída: a sobreposição some só depois que o pop-up termina de encolher.
+    const animate = p.type !== 'suggestions' && ctx.settings.get('animations') && !this.toastActive;
+    this._sendOverlay('overlay:hide', { animate });
+    const token = (this._hideToken = (this._hideToken || 0) + 1);
+    const finish = () => {
+      if (token !== this._hideToken || this.popup || this.toastActive || this.win.isDestroyed()) return;
+      this.overlay.setVisible(false);
+    };
+    if (animate) setTimeout(finish, POPUP_EXIT_MS);
+    else finish();
     this.sendUI('ui:popup', { type: null });
     if (hadFocus && p.type !== 'suggestions') this.activeTab?.webContents?.focus();
-    setTimeout(() => this._pumpPrompts(), 0);
+    setTimeout(() => this._pumpPrompts(), animate ? POPUP_EXIT_MS + 20 : 0);
   }
 
   setStatus(text) {
@@ -875,11 +886,63 @@ class PulseWindow {
         p.data = { zoom: tab ? tab.serialize().zoom : 100 };
         p.focus = true;
         break;
+      case 'site-passwords': {
+        if (!tab || !/^https?:/i.test(tab.displayUrl)) return null;
+        p.data = {
+          host: hostOf(tab.displayUrl),
+          accounts: ctx.passwords.forOrigin(tab.displayUrl).map((a) => ({ id: a.id, username: a.username, lastUsed: a.lastUsed })),
+        };
+        p.focus = true;
+        break;
+      }
+      case 'profile':
+        if (this.incognito) return null;
+        p.data = this.profileData();
+        p.focus = true;
+        ctx.accounts.refresh().catch(() => {});
+        break;
       default:
         break;
     }
     if (!p.anchor) p.anchor = { ...this.metrics.omnibox };
     return p;
+  }
+
+  profileData() {
+    return {
+      ...ctx.accounts.publicData(),
+      passwords: ctx.passwords.logins.length,
+      passwordManager: ctx.settings.get('passwordManager'),
+    };
+  }
+
+  // Abre páginas do Google (entrar, gerenciar conta, Gmail...) em uma aba.
+  openGoogle(page, index = 0) {
+    const { URLS } = require('./accounts');
+    const u = URLS[page];
+    if (!u) return;
+    const url = typeof u === 'function' ? u(Math.max(0, Number(index) || 0)) : u;
+    if (page === 'signout') {
+      dialog.showMessageBox(this.win, {
+        type: 'question',
+        buttons: ['Sair', 'Cancelar'],
+        defaultId: 0,
+        cancelId: 1,
+        title: 'PulseBrowser',
+        message: 'Sair de todas as contas do Google?',
+        detail: 'Você vai sair do Gmail, YouTube e dos outros serviços do Google neste navegador. As senhas salvas não são apagadas.',
+      }).then(({ response }) => {
+        if (response === 0) this._openUrlInTab(url);
+      });
+      return;
+    }
+    this._openUrlInTab(url);
+  }
+
+  _openUrlInTab(url) {
+    const t = this.activeTab;
+    if (t && t.isNewTab && !t.canGoBack()) t.loadURL(url);
+    else this.createTab({ url, active: true, opener: t });
   }
 
   // ---------------------------------------------------------------- Prompts
@@ -945,6 +1008,35 @@ class PulseWindow {
       focus: true,
       callback: finish,
       onDismiss: () => finish(null),
+    });
+  }
+
+  promptSavePassword({ origin, username, password, update }) {
+    let done = false;
+    const finish = (choice, user, pass) => {
+      if (done) return;
+      done = true;
+      if (choice === 'save') {
+        try {
+          const res = ctx.passwords.save({ origin, username: user ?? username, password: pass || password });
+          this.toast(res.updated ? 'Senha atualizada' : 'Senha salva');
+        } catch (err) {
+          console.warn('[passwords]', err.message);
+        }
+      } else if (choice === 'never') {
+        ctx.passwords.addNever(origin);
+      }
+    };
+    // Um pedido novo para o mesmo site substitui o que ainda está na fila.
+    this.promptQueue = this.promptQueue.filter((q) => !(q.type === 'password' && q.data.origin === origin));
+    this._queuePrompt({
+      type: 'password',
+      align: 'right',
+      anchor: { ...this.metrics.omnibox },
+      data: { origin, host: hostOf(origin), username, password, update },
+      focus: true,
+      callback: finish,
+      onDismiss: () => finish('dismiss'),
     });
   }
 
@@ -1045,6 +1137,28 @@ class PulseWindow {
       case 'zoom':
         this.zoom(action.dir);
         this.updatePopup({ type: this.popup?.type, data: { ...(this.popup?.data || {}), zoom: this.activeTab ? this.activeTab.serialize().zoom : 100 } });
+        break;
+      case 'password-response':
+        if (p?.type === 'password') {
+          const cb = p.callback;
+          p.onDismiss = null;
+          this.hidePopup();
+          cb(action.choice, typeof action.username === 'string' ? action.username : undefined, typeof action.password === 'string' ? action.password : undefined);
+        }
+        break;
+      case 'pw-copy': {
+        const login = typeof action.id === 'string' ? ctx.passwords.get(action.id) : null;
+        if (!login) break;
+        clipboard.writeText(action.field === 'password' ? ctx.passwords.password(action.id) : login.username);
+        break;
+      }
+      case 'pw-fill':
+        this.hidePopup();
+        if (typeof action.id === 'string') this.activeTab?.webContents?.send('pw:fill-now', action.id);
+        break;
+      case 'google':
+        this.hidePopup();
+        this.openGoogle(action.page, action.index);
         break;
       default:
         break;
@@ -1151,6 +1265,8 @@ class PulseWindow {
         case 'settings': this.openInternal(`pulse://settings/${arg ? `#${arg}` : ''}`); break;
         case 'clear-data': this.openInternal('pulse://settings/#privacy'); break;
         case 'about': this.openInternal('pulse://about/'); break;
+        case 'passwords': this.openInternal('pulse://passwords/'); break;
+        case 'google': this.openGoogle(arg?.page || arg, arg?.index); break;
         case 'fullscreen':
           if (this.htmlFullscreenTab) this.htmlFullscreenTab.webContents?.executeJavaScript('document.exitFullscreen()', true).catch(() => {});
           else this.win.setFullScreen(!this.win.isFullScreen());

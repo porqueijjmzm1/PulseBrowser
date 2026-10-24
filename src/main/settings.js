@@ -73,6 +73,23 @@ const DEFAULTS = {
   newTabBackground: 'aurora',
   hiddenTopSites: [],
   confirmCloseMultipleTabs: true,
+  // Senhas e contas
+  passwordManager: true,
+  passwordAutofill: true,
+  googleCompat: true,
+  showProfileButton: true,
+  // Corretor gramatical (LanguageTool)
+  grammarEnabled: true,
+  grammarLanguage: 'auto',
+  grammarMotherTongue: 'pt-BR',
+  grammarStyle: true,
+  grammarPicky: false,
+  grammarAutoFix: false,
+  grammarServer: '',
+  grammarDictionary: [],
+  grammarDisabledSites: [],
+  // Interface
+  animations: true,
 };
 
 // Valores aceitos para cada configuração editável a partir das páginas internas.
@@ -101,6 +118,20 @@ const VALIDATORS = {
   newTabBackground: (v) => ['aurora', 'sunset', 'ocean', 'forest', 'mono'].includes(v),
   hiddenTopSites: (v) => Array.isArray(v),
   confirmCloseMultipleTabs: (v) => typeof v === 'boolean',
+  passwordManager: (v) => typeof v === 'boolean',
+  passwordAutofill: (v) => typeof v === 'boolean',
+  googleCompat: (v) => typeof v === 'boolean',
+  showProfileButton: (v) => typeof v === 'boolean',
+  grammarEnabled: (v) => typeof v === 'boolean',
+  grammarLanguage: (v) => typeof v === 'string' && /^(auto|[a-z]{2,3}(-[A-Z]{2})?)$/.test(v),
+  grammarMotherTongue: (v) => typeof v === 'string' && /^([a-z]{2,3}(-[A-Z]{2})?)?$/.test(v),
+  grammarStyle: (v) => typeof v === 'boolean',
+  grammarPicky: (v) => typeof v === 'boolean',
+  grammarAutoFix: (v) => typeof v === 'boolean',
+  grammarServer: (v) => typeof v === 'string' && (v === '' || /^https?:\/\/[^\s]+$/i.test(v)) && v.length < 500,
+  grammarDictionary: (v) => Array.isArray(v) && v.length <= 5000 && v.every((s) => typeof s === 'string' && s.length < 100),
+  grammarDisabledSites: (v) => Array.isArray(v) && v.length <= 2000 && v.every((s) => typeof s === 'string' && s.length < 300),
+  animations: (v) => typeof v === 'boolean',
 };
 
 class Settings extends EventEmitter {

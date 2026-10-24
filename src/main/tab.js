@@ -466,6 +466,7 @@ class Tab {
       internal: isInternal(url),
       newTab: this.isNewTab,
       devtools: !!this.devtoolsView,
+      passwords: ctx.passwords && /^https?:/i.test(url) ? ctx.passwords.countFor(url) : 0,
     };
   }
 

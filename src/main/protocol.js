@@ -8,7 +8,7 @@ const PAGES_DIR = path.join(__dirname, '..', 'pages');
 const SHARED_DIR = path.join(__dirname, '..', 'shared');
 const ASSETS_DIR = path.join(__dirname, '..', 'assets');
 
-const PAGES = new Set(['newtab', 'history', 'bookmarks', 'downloads', 'settings', 'about', 'error']);
+const PAGES = new Set(['newtab', 'history', 'bookmarks', 'downloads', 'settings', 'about', 'error', 'passwords']);
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',

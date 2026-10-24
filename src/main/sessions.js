@@ -1,11 +1,17 @@
 'use strict';
 // Configuração de cada sessão do Chromium (normal e anônima).
+const path = require('path');
 const { session, app } = require('electron');
 const ctx = require('./context');
 const protocol = require('./protocol');
 const permissions = require('./permissions');
 
 const configured = new WeakSet();
+// Scripts de conteúdo carregados em todas as páginas da sessão (cada um ignora o que não é http/https).
+const CONTENT_SCRIPTS = [
+  { id: 'pulse-passwords', file: 'content-passwords.js' },
+  { id: 'pulse-grammar', file: 'content-grammar.js' },
+];
 const certExceptions = new WeakMap(); // session -> Set(host)
 
 function cleanUserAgent(ua) {
@@ -35,6 +41,27 @@ function applySpellcheck(ses) {
   if (langs.length) ses.setSpellCheckerLanguages(langs);
 }
 
+// O dicionário pessoal do corretor gramatical também vale para o corretor ortográfico do Chromium,
+// para a mesma palavra não continuar sublinhada pelos dois.
+const syncedWords = new WeakMap();
+function syncDictionary(ses) {
+  const want = new Set(ctx.settings.get('grammarDictionary') || []);
+  const had = syncedWords.get(ses) || new Set();
+  for (const w of want) {
+    if (had.has(w)) continue;
+    try {
+      ses.addWordToSpellCheckerDictionary(w);
+    } catch { /* ignora */ }
+  }
+  for (const w of had) {
+    if (want.has(w)) continue;
+    try {
+      ses.removeWordFromSpellCheckerDictionary(w);
+    } catch { /* ignora */ }
+  }
+  syncedWords.set(ses, want);
+}
+
 function getCertExceptions(ses) {
   let set = certExceptions.get(ses);
   if (!set) {
@@ -51,8 +78,16 @@ function setupSession(ses, { incognito = false } = {}) {
   ctx.shield.attach(ses, findTabByWebContentsId);
   ctx.downloads.attach(ses, { incognito });
   permissions.attach(ses);
+  for (const script of CONTENT_SCRIPTS) {
+    try {
+      ses.registerPreloadScript({ type: 'frame', id: script.id, filePath: path.join(__dirname, '..', 'preload', script.file) });
+    } catch (err) {
+      console.warn('[sessions] script de conteúdo não registrado:', script.id, err.message);
+    }
+  }
   ses.setUserAgent(cleanUserAgent(ses.getUserAgent()));
   applySpellcheck(ses);
+  syncDictionary(ses);
   return ses;
 }
 
@@ -99,6 +134,7 @@ module.exports = {
   getCertExceptions,
   findTabByWebContentsId,
   applySpellcheck,
+  syncDictionary,
   loadExtensions,
   cleanAppUserAgent,
 };

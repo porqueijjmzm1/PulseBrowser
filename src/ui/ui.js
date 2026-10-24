@@ -15,6 +15,7 @@
     settings: {},
     bookmarks: { bar: [], otherCount: 0 },
     downloads: null,
+    account: null,
   };
   let active = null;
   let currentPopup = null;
@@ -27,6 +28,7 @@
   $('#home-btn').innerHTML = icon('home', 18);
   $('#menu-btn').innerHTML = icon('more', 18);
   $('#star-btn').innerHTML = icon('star', 16);
+  $('#pw-btn').innerHTML = icon('key', 16);
   $('#downloads-btn .dl-icon').innerHTML = icon('download', 18);
   $('#shield-btn').insertAdjacentHTML('afterbegin', '<span class="sh-icon"></span>');
   $('#incognito-badge .inc-icon').innerHTML = icon('incognito', 16);
@@ -91,6 +93,27 @@
       }
     }
     return url;
+  }
+
+  function animOn() {
+    return !document.body.classList.contains('no-anim') && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  // Reinicia uma animação CSS de classe (ex.: "bump") no elemento.
+  function replay(el, cls) {
+    if (!el || !animOn()) return;
+    el.classList.remove(cls);
+    void el.offsetWidth;
+    el.classList.add(cls);
+    el.addEventListener('animationend', () => el.classList.remove(cls), { once: true });
+  }
+
+  // Desliza o elemento da posição antiga até a nova (técnica FLIP).
+  function flip(el, oldLeft, duration = 220) {
+    if (!animOn() || !el.isConnected) return;
+    const dx = oldLeft - el.offsetLeft;
+    if (Math.abs(dx) < 1) return;
+    el.animate([{ transform: `translateX(${dx}px)` }, { transform: 'none' }], { duration, easing: 'cubic-bezier(.2,.9,.3,1)' });
   }
 
   function allowlisted(host) {
@@ -196,21 +219,51 @@
     }
   }
 
+  // Abas vivas (sem as que estão encolhendo ao fechar).
+  function liveTabs() {
+    return [...tabsEl.children].filter((el) => !el.classList.contains('closing'));
+  }
+
+  function liveSibling(el, dir) {
+    let n = dir > 0 ? el.nextElementSibling : el.previousElementSibling;
+    while (n && n.classList.contains('closing')) n = dir > 0 ? n.nextElementSibling : n.previousElementSibling;
+    return n;
+  }
+
+  function closeTabEl(el) {
+    if (!animOn()) {
+      el.remove();
+      return;
+    }
+    el.classList.add('closing');
+    el.classList.remove('entering');
+    const done = () => el.remove();
+    el.addEventListener('animationend', done, { once: true });
+    setTimeout(done, 450);
+  }
+
   function renderTabs() {
     if (drag && drag.active) {
       pendingRender = true;
       return;
     }
     const existing = new Map();
-    for (const el of tabsEl.children) existing.set(Number(el.dataset.id), el);
+    const before = new Map();
+    for (const el of liveTabs()) {
+      existing.set(Number(el.dataset.id), el);
+      before.set(el, el.offsetLeft);
+    }
     state.tabs.forEach((t, i) => {
       let el = existing.get(t.id);
       if (!el) el = createTabEl(t);
       existing.delete(t.id);
       updateTabEl(el, t, t.id === state.activeId);
-      if (tabsEl.children[i] !== el) tabsEl.insertBefore(el, tabsEl.children[i] || null);
+      const live = liveTabs();
+      if (live[i] !== el) tabsEl.insertBefore(el, live[i] || null);
     });
-    for (const el of existing.values()) el.remove();
+    for (const el of existing.values()) closeTabEl(el);
+    // Abas que mudaram de lugar (fixar, mover) deslizam até a nova posição.
+    for (const [el, left] of before) if (el.isConnected && !el.classList.contains('closing')) flip(el, left);
     requestAnimationFrame(() => {
       updateNarrowTabs();
       const act = tabsEl.querySelector('.tab.active');
@@ -249,16 +302,20 @@
       el.classList.add('dragging');
       const pinned = el.classList.contains('pinned');
       const center = el.offsetLeft + dx + el.offsetWidth / 2;
-      const next = el.nextElementSibling;
-      const prev = el.previousElementSibling;
+      const next = liveSibling(el, 1);
+      const prev = liveSibling(el, -1);
       if (next && next.classList.contains('pinned') === pinned && center > next.offsetLeft + next.offsetWidth / 2) {
         const before = el.offsetLeft;
+        const nextLeft = next.offsetLeft;
         tabsEl.insertBefore(next, el);
         drag.startX += el.offsetLeft - before;
+        flip(next, nextLeft, 180);
       } else if (prev && prev.classList.contains('pinned') === pinned && center < prev.offsetLeft + prev.offsetWidth / 2) {
         const before = el.offsetLeft;
+        const prevLeft = prev.offsetLeft;
         tabsEl.insertBefore(el, prev);
         drag.startX += el.offsetLeft - before;
+        flip(prev, prevLeft, 180);
       }
       el.style.transform = `translateX(${e.clientX - drag.startX}px)`;
     });
@@ -268,9 +325,14 @@
       const tabId = drag.id;
       drag = null;
       el.classList.remove('dragging');
+      // Ao soltar, a aba desliza suavemente até o seu lugar.
+      const offset = new DOMMatrixReadOnly(getComputedStyle(el).transform).m41;
       el.style.transform = '';
+      if (wasActive && offset && animOn()) {
+        el.animate([{ transform: `translateX(${offset}px)` }, { transform: 'none' }], { duration: 200, easing: 'cubic-bezier(.2,.9,.3,1)' });
+      }
       if (wasActive) {
-        const index = [...tabsEl.children].indexOf(el);
+        const index = liveTabs().indexOf(el);
         window.pulse.send('ui:move-tab', { id: tabId, index });
       }
       if (pendingRender) {
@@ -331,9 +393,37 @@
   const input = $('#url-input');
   const omni = $('#omnibox');
 
+  const pwBtn = $('#pw-btn');
+  const profileBtn = $('#profile-btn');
+  const progress = $('#progress');
   let reloadIsStop = null;
   let siteKey = '';
   let shieldKey = '';
+  let lastStar = { id: null, on: false };
+  let lastBlocked = { id: null, n: 0 };
+  let progressFor = null;
+  let progressLoading = false;
+
+  // Barra de progresso fina embaixo da barra de ferramentas.
+  function renderProgress() {
+    const t = active;
+    const loading = !!(t && t.loading && !t.newTab);
+    const id = t ? t.id : null;
+    if (id !== progressFor) {
+      progressFor = id;
+      progressLoading = false;
+      progress.className = '';
+    }
+    if (loading && !progressLoading) {
+      progressLoading = true;
+      progress.className = '';
+      void progress.offsetWidth;
+      progress.className = 'loading';
+    } else if (!loading && progressLoading) {
+      progressLoading = false;
+      progress.className = 'done';
+    }
+  }
 
   function renderToolbar() {
     const t = active;
@@ -341,10 +431,13 @@
     fwdBtn.disabled = !t || !t.canGoForward;
     const loading = !!(t && t.loading);
     if (reloadIsStop !== loading) {
+      const first = reloadIsStop === null;
       reloadIsStop = loading;
       reloadBtn.innerHTML = icon(loading ? 'x' : 'reload', loading ? 18 : 17);
       reloadBtn.title = loading ? 'Parar carregamento (Esc)' : 'Recarregar (Ctrl+R)';
+      if (!first) replay(reloadBtn, 'swap');
     }
+    renderProgress();
 
     const sec = t ? t.security : 'neutral';
     const key = `${sec}|${t && t.newTab}`;
@@ -393,6 +486,15 @@
     starBtn.hidden = !bookmarkable;
     starBtn.classList.toggle('on', !!(t && t.bookmarked));
     starBtn.title = t && t.bookmarked ? 'Editar favorito (Ctrl+D)' : 'Adicionar aos favoritos (Ctrl+D)';
+    if (t && lastStar.id === t.id && !lastStar.on && t.bookmarked) replay(starBtn, 'burst');
+    lastStar = { id: t ? t.id : null, on: !!(t && t.bookmarked) };
+
+    const showPw = !!(t && t.passwords > 0 && state.settings.passwordManager !== false);
+    if (pwBtn.hidden === showPw) {
+      pwBtn.hidden = !showPw;
+      if (showPw) replay(pwBtn, 'appear');
+    }
+    if (showPw) pwBtn.title = `${t.passwords} senha(s) salva(s) para este site`;
 
     const host = t ? hostOf(t.url) : '';
     const shieldOn = state.settings.shieldEnabled !== false && !allowlisted(host);
@@ -406,6 +508,8 @@
       const badge = shieldBtn.querySelector('.badge');
       badge.hidden = !blocked;
       badge.textContent = blocked > 99 ? '99+' : String(blocked);
+      if (t && lastBlocked.id === t.id && blocked > lastBlocked.n) replay(badge, 'bump');
+      lastBlocked = { id: t ? t.id : null, n: blocked };
       shieldBtn.title = shieldOn
         ? `Pulse Shield: ${blocked} anúncio(s) e rastreador(es) bloqueado(s) nesta página`
         : 'Pulse Shield desativado para este site';
@@ -440,6 +544,8 @@
     pageinfo: '#site-info',
     bookmark: '#star-btn',
     zoom: '#zoom-badge',
+    'site-passwords': '#pw-btn',
+    profile: '#profile-btn',
   };
 
   function setPopupState(type) {
@@ -479,6 +585,36 @@
   shieldBtn.addEventListener('click', () => togglePopup('shield', shieldBtn, { align: 'right' }));
   dlBtn.addEventListener('click', () => togglePopup('downloads', dlBtn, { align: 'right' }));
   menuBtn.addEventListener('click', () => togglePopup('menu', menuBtn, { align: 'right' }));
+  pwBtn.addEventListener('click', () => togglePopup('site-passwords', pwBtn, { align: 'right' }));
+  profileBtn.addEventListener('click', () => togglePopup('profile', profileBtn, { align: 'right' }));
+
+  // ---------------------------------------------------------------- Perfil (conta do Google)
+  let accountKey = '';
+  function renderProfileBtn() {
+    const show = !INCOGNITO && state.settings.showProfileButton !== false;
+    profileBtn.hidden = !show;
+    if (!show) return;
+    const a = state.account;
+    const p = a && a.signedIn ? a.primary : null;
+    const key = p ? `${p.email}|${p.photo}` : 'guest';
+    if (key === accountKey) return;
+    accountKey = key;
+    const face = profileBtn.querySelector('.pb-face');
+    face.textContent = '';
+    profileBtn.classList.toggle('signed', !!p);
+    if (p && p.photo) {
+      const img = faviconImg(p.photo, () => letterEl(p.name || p.email));
+      img.width = 20;
+      img.height = 20;
+      face.appendChild(img);
+    } else if (p) {
+      face.appendChild(letterEl(p.name || p.email));
+    } else {
+      face.innerHTML = icon('user', 18);
+    }
+    profileBtn.title = p ? `Conta do Google\n${p.name}\n${p.email}` : 'Fazer login com o Google';
+    replay(face, 'appear');
+  }
 
   // ---------------------------------------------------------------- Barra de endereço
   let omniFocused = false;
@@ -757,6 +893,7 @@
   const findCount = $('#find-count');
 
   function openFind() {
+    if (findbar.hidden) replay(findbar, 'opening');
     findbar.hidden = false;
     findInput.focus();
     findInput.select();
@@ -831,7 +968,9 @@
   // ---------------------------------------------------------------- Eventos do processo principal
   function applySettings() {
     const s = state.settings;
+    document.body.classList.toggle('no-anim', s.animations === false);
     document.documentElement.style.setProperty('--accent', s.accentColor || '#7c5cff');
+    renderProfileBtn();
     $('#home-btn').hidden = !s.showHomeButton;
     input.placeholder = `Pesquise no ${s.engineName || 'Google'} ou digite um endereço`;
     shieldKey = '';
@@ -858,6 +997,10 @@
     }
     renderTabs();
     renderToolbar();
+  });
+  window.pulse.on('ui:account', (a) => {
+    state.account = a || null;
+    renderProfileBtn();
   });
   window.pulse.on('ui:bookmarks', (b) => {
     state.bookmarks = b || { bar: [], otherCount: 0 };

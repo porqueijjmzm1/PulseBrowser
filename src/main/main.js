@@ -40,7 +40,8 @@ function bootstrap() {
     // Salva todas as janelas abertas (se não houver nenhuma, mantém o último estado salvo).
     if (ctx.windows.length) require('./sessionstore').save();
     ctx.quitting = true;
-    for (const s of [ctx.settings, ctx.history, ctx.bookmarks, ctx.downloads]) s?.store?.flush();
+    for (const s of [ctx.settings, ctx.history, ctx.bookmarks, ctx.downloads, ctx.passwords, ctx.accounts]) s?.store?.flush();
+    ctx.grammar?.flush?.();
     ctx.shield?.stats?.flush();
   });
   app.on('certificate-error', (event, webContents, url, _error, _cert, callback) => {
@@ -144,6 +145,10 @@ function wireEvents() {
   ctx.settings.on('changed', (key) => {
     const data = ctx.settings.publicData();
     if (key === 'theme') nativeTheme.themeSource = data.theme;
+    if (key === 'grammarDictionary') {
+      sessions.syncDictionary(session.defaultSession);
+      if (ctx.incognitoSession) sessions.syncDictionary(ctx.incognitoSession);
+    }
     if (key === 'spellcheck' || key === 'spellcheckLanguages') {
       sessions.applySpellcheck(session.defaultSession);
       if (ctx.incognitoSession) sessions.applySpellcheck(ctx.incognitoSession);
@@ -154,7 +159,8 @@ function wireEvents() {
     }
     for (const w of ctx.windows) {
       w.sendUI('ui:settings', data);
-      if (key === 'shieldAllowlist' || key === 'shieldEnabled') w.scheduleUpdate();
+      if (key === 'animations') w._sendOverlay('overlay:settings', { animations: data.animations });
+      if (key === 'shieldAllowlist' || key === 'shieldEnabled' || key === 'passwordManager') w.scheduleUpdate();
     }
     ipc.broadcastInternal('internal:settings-changed', { key });
   });
@@ -172,6 +178,15 @@ function wireEvents() {
   });
 
   ctx.history.on('changed', () => ipc.broadcastInternal('internal:history-changed'));
+
+  ctx.accounts.on('changed', (data) => {
+    for (const w of ctx.windows) {
+      if (w.incognito) continue;
+      w.sendUI('ui:account', data);
+      if (w.popup?.type === 'profile') w.updatePopup({ type: 'profile', data: w.profileData() });
+    }
+    ipc.broadcastInternal('internal:accounts-changed', data);
+  });
 
   ctx.downloads.on('changed', () => {
     const summary = ctx.downloads.summary();
@@ -271,10 +286,17 @@ async function init() {
   const { Shield } = require('./shield');
   const sessions = require('./sessions');
 
+  const { Passwords } = require('./passwords');
+  const { GoogleAccounts } = require('./accounts');
+  const { Grammar } = require('./grammar');
+
   ctx.history = new History();
   ctx.bookmarks = new Bookmarks();
   ctx.downloads = new Downloads();
   ctx.shield = new Shield();
+  ctx.passwords = new Passwords();
+  ctx.accounts = new GoogleAccounts();
+  ctx.grammar = new Grammar();
 
   sessions.cleanAppUserAgent();
   nativeTheme.themeSource = ctx.settings.get('theme');
@@ -282,7 +304,10 @@ async function init() {
   sessions.setupSession(session.defaultSession);
 
   require('./ipc').register();
+  require('./autofill').register();
+  ctx.grammar.register();
   wireEvents();
+  ctx.accounts.start();
   setupJumpList();
   startMemorySaver();
 

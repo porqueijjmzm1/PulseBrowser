@@ -17,6 +17,10 @@
   $('#info').innerHTML = rows.map(([k, val]) => `<dt>${esc(k)}</dt><dd>${esc(val)}</dd>`).join('');
 
   const features = [
+    ['key', 'Gerenciador de senhas', 'Salva e preenche logins com criptografia do Windows, gera senhas fortes e avisa sobre senhas vazadas ou repetidas.'],
+    ['user', 'Contas do Google', 'Botão de perfil com Gmail, Drive, Agenda e YouTube, várias contas e login compatível com o Google.'],
+    ['spellCheck', 'Corretor gramatical', 'Sublinha erros enquanto você escreve nos sites e corrige com um clique, em 25 idiomas.'],
+    ['sparkles', 'Animações fluidas', 'Abas, menus, pop-ups e páginas com movimentos suaves (podem ser desligados).'],
     ['layers', 'Abas completas', 'Arrastar para reordenar, fixar, silenciar, duplicar, mover para nova janela e reabrir abas fechadas.'],
     ['shieldCheck', 'Pulse Shield', 'Bloqueio interno de anúncios, rastreadores e mineradores, com contador por página e exceções por site.'],
     ['incognito', 'Janela anônima', 'Sessão separada na memória, apagada ao fechar a última janela anônima.'],
@@ -25,12 +29,12 @@
     ['download', 'Downloads', 'Pausar, continuar, cancelar, progresso na barra de tarefas e histórico de downloads.'],
     ['zap', 'Economia de memória', 'Abas inativas entram em espera e voltam ao serem abertas.'],
     ['code', 'Ferramentas do desenvolvedor', 'DevTools do Chromium encaixadas na janela, código-fonte e inspecionar elemento.'],
-    ['key', 'Permissões por site', 'Câmera, microfone, localização, notificações e compartilhamento de tela com controle por site.'],
+    ['lock', 'Permissões por site', 'Câmera, microfone, localização, notificações e compartilhamento de tela com controle por site.'],
     ['camera', 'Captura e PDF', 'Capture a página, salve como PDF ou como página completa e imprima.'],
     ['refreshCcw', 'Restauração de sessão', 'Continue de onde parou, com histórico de navegação de cada aba.'],
     ['palette', 'Temas', 'Claro, escuro ou do sistema, com cores de destaque e fundos para a nova aba.'],
   ];
-  $('#features').innerHTML = features.map(([ic, t, d]) => `<div class="card feature">${icon(ic, 20)}<div><b>${esc(t)}</b><span class="muted small">${esc(d)}</span></div></div>`).join('');
+  $('#features').innerHTML = features.map(([ic, t, d], i) => `<div class="card feature" style="--i:${Math.min(i, 12)}">${icon(ic, 20)}<div><b>${esc(t)}</b><span class="muted small">${esc(d)}</span></div></div>`).join('');
 
   const keys = [
     ['Nova aba', 'Ctrl+T'], ['Nova janela', 'Ctrl+N'], ['Nova janela anônima', 'Ctrl+Shift+N'],

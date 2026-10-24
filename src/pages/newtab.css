@@ -112,3 +112,54 @@ main { width: min(760px, calc(100vw - 48px)); display: flex; flex-direction: col
 .inc-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; text-align: left; margin-bottom: 26px; width: 100%; }
 .inc-cols ul { margin: 8px 0 0; padding-left: 18px; color: var(--muted); }
 @media (max-width: 640px) { .inc-cols { grid-template-columns: 1fr; } }
+
+/* ---------------------------------------------------------------- Animações */
+.bg i { transition: background-color 1.2s ease, opacity 0.8s ease; }
+.clock-wrap { animation: nt-drop 0.6s cubic-bezier(0.2, 0.9, 0.3, 1) backwards; }
+.brand-big { animation: nt-rise 0.6s cubic-bezier(0.2, 0.9, 0.3, 1) 0.06s backwards; }
+.brand-big .logo { animation: logo-in 0.9s cubic-bezier(0.2, 1.6, 0.4, 1) 0.15s backwards; }
+.brand-big .logo svg { transition: transform 0.45s cubic-bezier(0.3, 1.6, 0.5, 1), filter 0.3s; }
+.brand-big:hover .logo svg { transform: rotate(-10deg) scale(1.1); filter: drop-shadow(0 8px 20px rgba(124, 92, 255, 0.55)); }
+.nt-search {
+  animation: nt-rise 0.6s cubic-bezier(0.2, 0.9, 0.3, 1) 0.12s backwards;
+  transition: border-color 0.2s, box-shadow 0.35s cubic-bezier(0.2, 0.9, 0.3, 1), transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.nt-search:focus-within { transform: scale(1.02); }
+.nt-search .s-icon { transition: color 0.2s; display: grid; }
+.nt-search .s-icon .ico { transition: transform 0.35s cubic-bezier(0.3, 1.6, 0.5, 1); }
+.nt-search:focus-within .s-icon { color: var(--accent); }
+.nt-search:focus-within .s-icon .ico { transform: scale(1.1) rotate(-8deg); }
+.tile {
+  animation: tile-in 0.5s cubic-bezier(0.2, 1.2, 0.4, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 40ms + 200ms);
+  transition: transform 0.3s cubic-bezier(0.3, 1.5, 0.5, 1), background-color 0.2s, box-shadow 0.3s;
+}
+.tile.static { animation: none; }
+.tile:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(20, 16, 40, 0.16); }
+.tile:active { transform: translateY(-1px) scale(0.96); }
+.tile .fav { transition: transform 0.35s cubic-bezier(0.3, 1.6, 0.5, 1); }
+.tile:hover .fav { transform: scale(1.08); }
+.tile .t-remove { transform: scale(0.6); transition: opacity 0.15s, transform 0.2s cubic-bezier(0.3, 1.6, 0.5, 1), background-color 0.15s; }
+.tile:hover .t-remove { transform: none; }
+.tile.removing { animation: tile-out 0.25s cubic-bezier(0.4, 0, 0.8, 0.4) forwards; pointer-events: none; }
+.corner-left, .corner-right { animation: nt-rise 0.5s cubic-bezier(0.2, 0.9, 0.3, 1) 0.4s backwards; }
+.corner-right .ico { transition: transform 0.45s cubic-bezier(0.3, 1.6, 0.5, 1); }
+.corner-right:hover .ico { transform: rotate(-20deg) scale(1.12); }
+.customize { transform-origin: bottom right; }
+.customize.opening { animation: panel-in 0.32s cubic-bezier(0.2, 1, 0.3, 1.1); }
+.customize.closing { animation: panel-out 0.16s ease-in forwards; pointer-events: none; }
+.bg-choice { transition: transform 0.25s cubic-bezier(0.3, 1.6, 0.5, 1), border-color 0.2s; }
+.bg-choice:hover { transform: scale(1.08); }
+.bg-choice:active { transform: scale(0.94); }
+#incognito > * { animation: nt-rise 0.55s cubic-bezier(0.2, 0.9, 0.3, 1) backwards; }
+#incognito > :nth-child(2) { animation-delay: 0.05s; }
+#incognito > :nth-child(3) { animation-delay: 0.1s; }
+#incognito > :nth-child(4) { animation-delay: 0.15s; }
+#incognito > :nth-child(5) { animation-delay: 0.2s; }
+@keyframes nt-drop { from { opacity: 0; transform: translateY(-14px); } }
+@keyframes nt-rise { from { opacity: 0; transform: translateY(16px); } }
+@keyframes logo-in { from { opacity: 0; transform: scale(0.4) rotate(-30deg); } }
+@keyframes tile-in { from { opacity: 0; transform: translateY(14px) scale(0.9); } }
+@keyframes tile-out { to { opacity: 0; transform: scale(0.8); } }
+@keyframes panel-in { from { opacity: 0; transform: translateY(10px) scale(0.94); } }
+@keyframes panel-out { to { opacity: 0; transform: translateY(6px) scale(0.97); } }
