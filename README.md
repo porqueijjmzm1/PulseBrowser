@@ -6,7 +6,7 @@ Navegador para Windows baseado no **Chromium 152** (via Electron 44), com interf
 
 ## Download
 
-Baixe o instalador **PulseBrowser Setup 1.0.0.exe** na página de [Releases](../../releases/latest) (Windows 10/11, 64 bits).
+Baixe o instalador **PulseBrowser-Setup-1.0.0.exe** na página de [Releases](../../releases/latest) (Windows 10/11, 64 bits).
 
 O instalador não tem assinatura digital, então o Windows pode mostrar "O Windows protegeu o computador". Clique em **Mais informações** e depois em **Executar assim mesmo**.
 
