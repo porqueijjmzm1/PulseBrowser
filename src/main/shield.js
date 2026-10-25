@@ -1,5 +1,5 @@
 'use strict';
-// Pulse Shield: bloqueio de anúncios, rastreadores, telemetria, avisos de cookies e golpes.
+// tuff Shield: bloqueio de anúncios, rastreadores, telemetria, avisos de cookies e golpes.
 // Junta a lista interna (blocklist.js) com listas de filtros da comunidade (EasyList, uBlock Origin,
 // HaGeZi...) interpretadas pelo motor do Ghostery. As listas são baixadas e montadas em segundo plano.
 const fs = require('fs');
@@ -217,7 +217,7 @@ class Shield {
         } catch { /* já saiu */ }
         resolve(r);
       };
-      const child = utilityProcess.fork(BUILDER, [], { serviceName: 'Pulse Shield', stdio: 'ignore' });
+      const child = utilityProcess.fork(BUILDER, [], { serviceName: 'tuff Shield', stdio: 'ignore' });
       const timer = setTimeout(() => finish({ ok: false, error: 'tempo esgotado' }), 180000);
       child.on('message', (m) => finish(m || { ok: false, error: 'sem resposta' }));
       child.on('exit', (code) => finish({ ok: false, error: `processo encerrado (${code})` }));
@@ -391,7 +391,7 @@ class Shield {
       if (!isWeb(sourceUrl)) sourceUrl = details.referrer || (tab ? tab.url : '') || '';
       const topUrl = tab ? tab.url : sourceUrl;
       // Páginas internas do navegador e sites liberados pelo usuário não passam pelo Shield.
-      if (topUrl.startsWith('pulse:') || this.isAllowlisted(hostOf(topUrl))) return callback({});
+      if (topUrl.startsWith('tuff:') || this.isAllowlisted(hostOf(topUrl))) return callback({});
 
       let r;
       try {

@@ -1,5 +1,5 @@
 'use strict';
-// Pulse Shield nas páginas: esconde espaços de anúncio e avisos de cookies (regras cosméticas) e roda os
+// tuff Shield nas páginas: esconde espaços de anúncio e avisos de cookies (regras cosméticas) e roda os
 // scripts de correção das listas de filtros (ex.: anúncios do YouTube) antes dos scripts do próprio site.
 // Roda no mundo isolado: o site não enxerga este script.
 const { ipcRenderer, webFrame } = require('electron');

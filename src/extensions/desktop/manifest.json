@@ -1,0 +1,9 @@
+{
+  "name": "Desktop",
+  "version": "1.0",
+  "author": "tuff.browse",
+  "description": "Transforma a nova aba num desktop: papel de parede, ícones de vidro líquido, dock, widgets de relógio, clima, notas e Spotify embutido.",
+  "icon": "icon.svg",
+  "newtab": "newtab.html",
+  "action": { "default_popup": "popup.html", "default_title": "Desktop — personalizar a nova aba" }
+}

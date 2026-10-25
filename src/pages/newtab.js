@@ -90,7 +90,7 @@
     const stats = await window.pulse.invoke('internal:shield-stats');
     if (s.shieldEnabled && stats.total > 0) {
       const el = $('#shield-stat');
-      el.innerHTML = `${icon('shieldCheck', 16)} <span>Pulse Shield: <b>${esc(stats.total.toLocaleString('pt-BR'))}</b> anúncios e rastreadores bloqueados</span>`;
+      el.innerHTML = `${icon('shieldCheck', 16)} <span>tuff Shield: <b>${esc(stats.total.toLocaleString('pt-BR'))}</b> anúncios e rastreadores bloqueados</span>`;
       el.hidden = false;
     }
   }

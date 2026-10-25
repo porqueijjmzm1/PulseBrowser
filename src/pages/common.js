@@ -1,5 +1,5 @@
 'use strict';
-// Utilitários compartilhados pelas páginas internas pulse://.
+// Utilitários compartilhados pelas páginas internas tuff://.
 (() => {
   const { icon, LOGO } = window.PulseIcons;
   const $ = (s, root = document) => root.querySelector(s);

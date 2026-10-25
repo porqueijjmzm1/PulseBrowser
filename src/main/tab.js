@@ -4,13 +4,22 @@ const path = require('path');
 const { WebContentsView, dialog, nativeTheme } = require('electron');
 const ctx = require('./context');
 const { showPageMenu } = require('./contextmenu');
+const { normalizeInternal } = require('./protocol');
 
 const TAB_PRELOAD = path.join(__dirname, '..', 'preload', 'internal-preload.js');
-const NEW_TAB = 'pulse://newtab/';
+const NEW_TAB = 'tuff://newtab/';
 let nextTabId = 1;
 
 function isInternal(url) {
-  return typeof url === 'string' && url.startsWith('pulse:');
+  return typeof url === 'string' && /^(tuff|pulse):/i.test(url);
+}
+
+function isExtensionUrl(url) {
+  return typeof url === 'string' && url.startsWith('tuff-ext:');
+}
+
+function isBuiltinNewTab(url) {
+  return typeof url === 'string' && /^(tuff|pulse):\/\/newtab(\/|$|[?#])/i.test(url);
 }
 
 function tabWebPreferences(ses) {
@@ -20,6 +29,8 @@ function tabWebPreferences(ses) {
     contextIsolation: true,
     sandbox: true,
     nodeIntegration: false,
+    // Os scripts de conteúdo (corretor, Shield, extensões) também rodam dentro de iframes.
+    nodeIntegrationInSubFrames: true,
     webSecurity: true,
     plugins: true, // visualizador de PDF do Chromium
     spellcheck: ctx.settings.get('spellcheck'),
@@ -33,7 +44,7 @@ class Tab {
   constructor(win, opts = {}) {
     this.id = nextTabId++;
     this.window = win;
-    this.url = opts.url || NEW_TAB;
+    this.url = this._resolveUrl(opts.url || NEW_TAB);
     this.title = opts.title || '';
     this.favicon = opts.favicon || '';
     this.pinned = !!opts.pinned;
@@ -69,12 +80,23 @@ class Tab {
   }
 
   get isNewTab() {
-    return this.url.startsWith('pulse://newtab');
+    return isBuiltinNewTab(this.url) || !!ctx.extensions?.isNewTabUrl(this.url);
+  }
+
+  // Endereço que a aba deve abrir de fato: troca pulse:// por tuff:// e, se uma extensão
+  // substitui a nova aba, abre a página dela (janelas anônimas mantêm a nova aba padrão).
+  _resolveUrl(url) {
+    let u = normalizeInternal(url);
+    const ext = ctx.extensions;
+    if (!ext) return u;
+    if (ext.isNewTabUrl(u, { anyExtension: true }) || ext.isOrphanUrl(u)) u = NEW_TAB;
+    if (isBuiltinNewTab(u) && !this.window.incognito) return ext.newTabUrl() || u;
+    return u;
   }
 
   // URL mostrada ao usuário (a página de erro mostra o endereço original).
   get displayUrl() {
-    if (this.url.startsWith('pulse://error')) {
+    if (this.url.startsWith('tuff://error')) {
       try {
         return new URL(this.url).searchParams.get('url') || this.url;
       } catch {
@@ -100,7 +122,7 @@ class Tab {
     if (this.muted) wc.setAudioMuted(true);
     if (adopt) return;
     if (this.navEntries) {
-      const entries = this.navEntries;
+      const entries = this.navEntries.map((e) => ({ ...e, url: this._resolveUrl(e.url) }));
       const index = this.navIndex;
       this.navEntries = null;
       wc.navigationHistory.restore({ entries, index }).catch(() => wc.loadURL(this.url).catch(() => {}));
@@ -110,6 +132,7 @@ class Tab {
   }
 
   _backgroundFor(url) {
+    if (isExtensionUrl(url) && ctx.extensions?.isNewTabUrl(url)) return '#0e0d14';
     if (isInternal(url)) return nativeTheme.shouldUseDarkColors || this.window.incognito ? '#17161c' : '#f6f5fa';
     return '#ffffff';
   }
@@ -129,7 +152,7 @@ class Tab {
     wc.on('did-stop-loading', () => {
       this.loading = false;
       // Páginas sem <title>: mostra o endereço em vez do título da página anterior.
-      if (!this.title && !this.url.startsWith('pulse://error')) {
+      if (!this.title && !this.url.startsWith('tuff://error')) {
         const t = wc.getTitle();
         if (t && t !== this.url) this.title = t;
       }
@@ -152,7 +175,7 @@ class Tab {
       this.blockedCats = {};
       this.favicon = '';
       this.zoom = wc.getZoomFactor();
-      if (url.startsWith('pulse://error')) {
+      if (url.startsWith('tuff://error')) {
         this._dropFailedEntry();
       } else {
         this.errorInfo = null;
@@ -178,7 +201,7 @@ class Tab {
       this._update();
     });
     wc.on('did-fail-load', (_e, code, desc, url, isMainFrame) => {
-      if (!isMainFrame || code === -3 || !url || url.startsWith('pulse://error')) return;
+      if (!isMainFrame || code === -3 || !url || url.startsWith('tuff://error')) return;
       this.showError(url, code, desc);
     });
     wc.on('render-process-gone', (_e, details) => {
@@ -219,8 +242,9 @@ class Tab {
       if (this.window.activeTab === this) this.window.setStatus(url);
     });
     wc.on('will-navigate', (details) => {
-      // Sites comuns não podem abrir páginas internas do navegador.
-      if (isInternal(details.url) && !isInternal(wc.getURL())) details.preventDefault();
+      // Sites comuns não podem abrir páginas internas do navegador nem páginas de extensões.
+      const from = wc.getURL();
+      if ((isInternal(details.url) || isExtensionUrl(details.url)) && !isInternal(from) && !isExtensionUrl(from)) details.preventDefault();
     });
     wc.on('will-prevent-unload', (event) => {
       const choice = dialog.showMessageBoxSync(this.window.win, {
@@ -270,7 +294,7 @@ class Tab {
     if (!wc) return;
     this.errorInfo = { url, code, desc };
     const q = new URLSearchParams({ url, code: String(code), desc: desc || '' });
-    wc.loadURL(`pulse://error/?${q.toString()}`).catch(() => {});
+    wc.loadURL(`tuff://error/?${q.toString()}`).catch(() => {});
   }
 
   onRequestBlocked(host, cat = 'ads') {
@@ -282,6 +306,7 @@ class Tab {
 
   // ---- Navegação ----
   loadURL(url) {
+    url = this._resolveUrl(url);
     this.ensureView();
     this.errorInfo = null;
     this.viewSource = url.startsWith('view-source:');
@@ -308,9 +333,9 @@ class Tab {
   reload(ignoreCache = false) {
     const wc = this.webContents;
     if (!wc) return;
-    if (this.url.startsWith('pulse://error')) {
+    if (this.url.startsWith('tuff://error')) {
       const original = this.errorInfo?.url || this.displayUrl;
-      if (original && !original.startsWith('pulse://error')) {
+      if (original && !original.startsWith('tuff://error')) {
         this.loadURL(original);
         return;
       }
@@ -425,12 +450,12 @@ class Tab {
   }
 
   security() {
-    if (this.url.startsWith('pulse://error')) {
+    if (this.url.startsWith('tuff://error')) {
       const code = Number(this.errorInfo?.code ?? new URL(this.url).searchParams.get('code'));
       return code <= -200 && code > -300 ? 'dangerous' : 'error';
     }
     const u = this.displayUrl;
-    if (isInternal(u)) return 'internal';
+    if (isInternal(u) || this.isNewTab) return 'internal';
     if (u.startsWith('https:') || u.startsWith('wss:')) {
       try {
         if (this.window.certExceptions().has(new URL(u).host)) return 'dangerous';
@@ -439,7 +464,7 @@ class Tab {
     }
     if (u.startsWith('http:')) return 'insecure';
     if (u.startsWith('file:')) return 'file';
-    if (u.startsWith('chrome-extension:')) return 'extension';
+    if (u.startsWith('chrome-extension:') || isExtensionUrl(u)) return 'extension';
     return 'neutral';
   }
 
@@ -492,7 +517,7 @@ class Tab {
     }
     if (entries && entries.length < 2) entries = null;
     return {
-      url: this.displayUrl,
+      url: this.isNewTab ? NEW_TAB : this.displayUrl,
       title: this.title,
       favicon: this.favicon,
       pinned: this.pinned,
@@ -503,4 +528,4 @@ class Tab {
   }
 }
 
-module.exports = { Tab, NEW_TAB, isInternal };
+module.exports = { Tab, NEW_TAB, isInternal, isExtensionUrl, isBuiltinNewTab };

@@ -12,6 +12,9 @@
   </defs>
   <circle cx="256" cy="256" r="244" fill="url(#g)"/>
   <circle cx="256" cy="256" r="244" fill="url(#h)"/>
-  <polyline points="92,268 174,268 210,178 260,358 300,210 328,268 420,268" fill="none" stroke="#ffffff"
-    stroke-width="38" stroke-linecap="round" stroke-linejoin="round"/>
+  <g fill="none" stroke="#ffffff" stroke-width="58" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M205 122V300Q205 368 262 368"/>
+    <path d="M141 204H295"/>
+  </g>
+  <circle cx="356" cy="368" r="36" fill="#ffffff"/>
 </svg>

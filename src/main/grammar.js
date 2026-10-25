@@ -280,20 +280,36 @@ class Grammar {
 
   // Avisa as páginas abertas que as configurações do corretor mudaram.
   broadcast() {
+    // Vai para todos os frames (o corretor também roda em iframes).
     const send = (wc) => {
-      if (wc && !wc.isDestroyed() && /^https?:/.test(wc.getURL())) wc.send('grammar:config-changed');
+      if (!wc || wc.isDestroyed()) return;
+      let frames = [];
+      try {
+        frames = wc.mainFrame.framesInSubtree;
+      } catch { /* ignora */ }
+      for (const f of frames) {
+        try {
+          if (/^https?:/.test(f.origin || f.url || '')) f.send('grammar:config-changed');
+        } catch { /* frame já foi embora */ }
+      }
     };
     for (const w of ctx.windows) for (const t of w.tabs) send(t.webContents);
     for (const bw of BrowserWindow.getAllWindows()) if (!ctx.windows.some((w) => w.win === bw)) send(bw.webContents);
   }
 
   register() {
+    // Páginas da web (o frame principal ou iframes). A lista de sites desativados vale pelo site da aba.
     const contentOnly = (event) => {
       const frame = event.senderFrame;
-      if (!frame || frame.parent) return null;
+      if (!frame) return null;
       const origin = frame.origin || '';
       if (!/^https?:\/\//.test(origin)) return null;
-      return { origin, wc: event.sender };
+      let top = origin;
+      try {
+        const t = frame.top;
+        if (t && t !== frame && /^https?:\/\//.test(t.origin || '')) top = t.origin;
+      } catch { /* ignora */ }
+      return { origin: top, frameOrigin: origin, wc: event.sender, frameKey: `${frame.processId}:${frame.routingId}`, isTop: !frame.parent };
     };
 
     ctx.settings.on('changed', (key) => {
@@ -315,7 +331,7 @@ class Grammar {
       if (!c || !ctx.settings.get('grammarEnabled')) return { matches: [], disabled: true };
       const text = typeof payload?.text === 'string' ? payload.text.slice(0, 60000) : '';
       if (!text.trim()) return { matches: [], language: null };
-      const requester = `${c.wc.id}:${String(payload?.field || '')}`;
+      const requester = `${c.wc.id}:${c.frameKey}:${String(payload?.field || '')}`;
       try {
         return await this.check(text, requester, payload?.token);
       } catch (err) {
@@ -343,6 +359,45 @@ class Grammar {
       const host = hostOf(c.origin).replace(/^www\./, '');
       const list = ctx.settings.get('grammarDisabledSites') || [];
       if (host && !list.includes(host)) ctx.settings.set('grammarDisabledSites', [...list, host]);
+    });
+
+    // Google Docs desenha o texto num canvas: para trocar uma palavra, seleciona com clique e
+    // shift+clique de verdade nas posições calculadas pela página e digita a sugestão.
+    ipcMain.handle('grammar:docs-replace', async (event, p) => {
+      const c = contentOnly(event);
+      if (!c || !c.isTop || hostOf(c.frameOrigin) !== 'docs.google.com' || !ctx.settings.get('grammarEnabled')) return false;
+      const nums = [p?.x1, p?.y1, p?.x2, p?.y2];
+      if (!nums.every((n) => Number.isFinite(n) && n >= 0 && n < 20000)) return false;
+      const text = typeof p.text === 'string' ? p.text.slice(0, 500) : '';
+      const wc = c.wc;
+      if (wc.isDestroyed()) return false;
+      const z = typeof wc.getZoomFactor === 'function' ? wc.getZoomFactor() || 1 : 1;
+      const at = (x, y) => ({ x: Math.round(x * z), y: Math.round(y * z) });
+      const a = at(p.x1, p.y1);
+      const b = at(p.x2, p.y2);
+      const send = (ev) => {
+        if (!wc.isDestroyed()) wc.sendInputEvent(ev);
+      };
+      try {
+        wc.focus();
+        send({ type: 'mouseMove', ...a });
+        send({ type: 'mouseDown', ...a, button: 'left', clickCount: 1 });
+        send({ type: 'mouseUp', ...a, button: 'left', clickCount: 1 });
+        await sleep(70);
+        send({ type: 'mouseMove', ...b, modifiers: ['shift'] });
+        send({ type: 'mouseDown', ...b, button: 'left', clickCount: 1, modifiers: ['shift'] });
+        send({ type: 'mouseUp', ...b, button: 'left', clickCount: 1, modifiers: ['shift'] });
+        await sleep(90);
+        if (wc.isDestroyed()) return false;
+        if (text) wc.insertText(text);
+        else {
+          send({ type: 'keyDown', keyCode: 'Delete' });
+          send({ type: 'keyUp', keyCode: 'Delete' });
+        }
+        return true;
+      } catch {
+        return false;
+      }
     });
 
     ipcMain.on('grammar:open-settings', (event) => {

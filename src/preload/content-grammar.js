@@ -1,16 +1,47 @@
 'use strict';
-// PulseBrowser - corretor gramatical nas páginas (no estilo do Grammarly).
+// tuff.browse - corretor gramatical nas páginas (no estilo do Grammarly).
 // Sublinha erros em caixas de texto e campos editáveis, mostra sugestões ao passar o mouse
 // e permite corrigir com um clique. Roda no mundo isolado: o site não vê este script.
-const { ipcRenderer } = require('electron');
+const { ipcRenderer, contextBridge } = require('electron');
+
+// Google Docs desenha o texto num <canvas>. Com esta marca (definida antes dos scripts do Docs),
+// ele também gera uma camada SVG com o texto de cada trecho, a mesma usada por extensões de leitura.
+if (location.hostname === 'docs.google.com') {
+  try {
+    if (window.top === window) contextBridge.exposeInMainWorld('_docs_annotate_canvas_by_ext', 'ogmnaimimemjmbakcfefmnahgdfhfami');
+  } catch { /* ignora */ }
+}
 
 (() => {
-  if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
+  // Também roda em iframes (editores como TinyMCE e CKEditor ficam dentro de um), inclusive os
+  // about:blank/srcdoc, que herdam a origem da página.
+  const pageOrigin = /^https?:$/.test(location.protocol) ? location.origin : String(window.origin || '');
+  if (!/^https?:\/\//.test(pageOrigin)) return;
+  let isTop = true;
   try {
-    if (window.top !== window) return;
+    isTop = window.top === window;
   } catch {
-    return;
+    isTop = false;
   }
+  let originHost = '';
+  try {
+    originHost = new URL(pageOrigin).hostname;
+  } catch { /* ignora */ }
+  // No Google Docs, os iframes internos só recebem as teclas; o texto é lido pela camada do documento.
+  if (!isTop && originHost === 'docs.google.com') return;
+  // Iframe do mesmo site que a página de fora: quem cuida dele é a página (assim o cartão de
+  // sugestões aparece inteiro, sem ficar cortado dentro do iframe).
+  if (!isTop) {
+    let parentSame = false;
+    try {
+      parentSame = !!window.parent.document;
+    } catch { /* outro site */ }
+    if (parentSame) return;
+  }
+  const DOCS = isTop && originHost === 'docs.google.com' && /^\/document\//.test(location.pathname);
+  try {
+    document.__tuffGrammar = true;
+  } catch { /* ignora */ }
 
   const SVGNS = 'http://www.w3.org/2000/svg';
   const KIND_LABEL = { spelling: 'Ortografia', grammar: 'Gramática', style: 'Estilo', punct: 'Pontuação' };
@@ -20,7 +51,7 @@ const { ipcRenderer } = require('electron');
     style: 'Sugestão de estilo',
     punct: 'Pontuação ou digitação',
   };
-  const SKIP = '.CodeMirror, .cm-editor, .monaco-editor, .ace_editor, .ql-code-block, pre, code, [data-gramm="false"], [data-enable-grammarly="false"], [data-pulse-grammar="off"]';
+  const SKIP = '.CodeMirror, .cm-editor, .monaco-editor, .ace_editor, .ql-code-block, pre, code, [data-gramm="false"], [data-enable-grammarly="false"], [data-pulse-grammar="off"], [data-tuff-grammar="off"]';
   const WORD = /[\p{L}\p{N}_'’-]/u;
 
   let config = null;
@@ -30,7 +61,6 @@ const { ipcRenderer } = require('electron');
   let focused = null;
   let fieldSeq = 0;
   const ui = { host: null, root: null, badge: null, card: null, panel: null };
-  let docSheet = null;
   let tickTimer = null;
 
   // ---------------------------------------------------------------- Utilidades
@@ -109,26 +139,91 @@ const { ipcRenderer } = require('electron');
     return out;
   }
 
+  // Alvo real do evento, mesmo dentro de componentes com shadow DOM.
+  function deepTarget(e) {
+    const path = typeof e.composedPath === 'function' ? e.composedPath() : null;
+    return (path && path[0]) || e.target;
+  }
+
+  function deepActive(doc = document) {
+    let a = doc.activeElement;
+    for (let i = 0; a && i < 20; i++) {
+      if (a.shadowRoot && a.shadowRoot.activeElement) {
+        a = a.shadowRoot.activeElement;
+        continue;
+      }
+      if (a.tagName === 'IFRAME' || a.tagName === 'FRAME') {
+        let d = null;
+        try {
+          d = a.contentDocument;
+        } catch { /* outro site */ }
+        if (d && d.activeElement) {
+          a = d.activeElement;
+          continue;
+        }
+      }
+      break;
+    }
+    return a;
+  }
+
+  function selFor(field) {
+    const root = field && field.getRootNode ? field.getRootNode() : null;
+    const doc = (field && field.ownerDocument) || document;
+    if (root && root !== doc && typeof root.getSelection === 'function') {
+      try {
+        const s = root.getSelection();
+        if (s) return s;
+      } catch { /* ignora */ }
+    }
+    return (doc.defaultView || window).getSelection();
+  }
+
+  // Campos de uma linha: só os de texto livre (nada de busca, e-mail, usuário, endereço...).
+  const INPUT_HINT = /(search|pesquis|busca|query|\bq\b|e-?mail|login|user|usu[aá]rio|senha|pass|url|link|site|cep|cpf|cnpj|phone|telefone|celular|code|c[oó]digo|token|zip|city|cidade|nome|name|endere|address|coupon|cupom)/i;
+  function textInputOk(f) {
+    const type = (f.getAttribute('type') || 'text').toLowerCase();
+    if (type !== 'text') return false;
+    if (f.readOnly || f.disabled || f.list) return false;
+    if (f.getAttribute('role') === 'combobox' || f.getAttribute('aria-autocomplete') === 'list' || f.getAttribute('aria-haspopup') === 'listbox') return false;
+    const ac = (f.getAttribute('autocomplete') || '').toLowerCase();
+    if (ac && ac !== 'on' && ac !== 'off') return false;
+    const hint = `${f.name || ''} ${f.id || ''} ${f.getAttribute('placeholder') || ''} ${f.getAttribute('aria-label') || ''}`;
+    return !INPUT_HINT.test(hint);
+  }
+
   function editingHost(node) {
-    if (!(node instanceof HTMLElement)) return null;
-    if (node instanceof HTMLTextAreaElement) return node;
+    if (!node || node.nodeType !== 1 || typeof node.isContentEditable !== 'boolean') return null;
+    if (node.tagName === 'TEXTAREA' || node.tagName === 'INPUT') return node;
     if (!node.isContentEditable) return null;
     let host = node;
     while (host.parentElement && host.parentElement.isContentEditable) host = host.parentElement;
+    // Modo de design (iframe inteiro editável): o campo é o <body>.
+    const doc = host.ownerDocument;
+    if (host === doc.documentElement) host = doc.body || host;
     return host;
   }
 
   function eligible(field) {
     if (!field || !field.isConnected) return false;
-    if (field instanceof HTMLTextAreaElement) {
+    const doc = field.ownerDocument;
+    let minW = 120;
+    let r = field.getBoundingClientRect();
+    if (field.tagName === 'TEXTAREA') {
       if (field.readOnly || field.disabled) return false;
-    } else if (!field.isContentEditable || field === document.body || field === document.documentElement) {
+    } else if (field.tagName === 'INPUT') {
+      if (!textInputOk(field)) return false;
+      minW = 200;
+    } else if (!field.isContentEditable || field === doc.documentElement) {
       return false;
+    } else if (field === doc.body) {
+      if (doc === document && isTop) return false;
+      // O <body> editável de um iframe ocupa a janela toda, mesmo com pouco texto.
+      r = { width: doc.documentElement.clientWidth, height: doc.documentElement.clientHeight };
     }
     if (field.getAttribute('spellcheck') === 'false') return false;
     if (field.closest(SKIP)) return false;
-    const r = field.getBoundingClientRect();
-    return r.width >= 120 && r.height >= 22;
+    return r.width >= minW && r.height >= 22;
   }
 
   function insideOurUi(node) {
@@ -165,13 +260,36 @@ const { ipcRenderer } = require('electron');
     `;
   }
 
+  // Uma folha por documento (a página e os iframes que este script cuida).
+  const docSheets = new Map();
+  function sheetFor(doc) {
+    let sh = docSheets.get(doc);
+    if (!sh) {
+      const W = doc.defaultView || window;
+      sh = new W.CSSStyleSheet();
+      sh.replaceSync(docCss());
+      docSheets.set(doc, sh);
+    }
+    return sh;
+  }
+
   function ensureDocSheet() {
+    const adopt = (target, sh) => {
+      try {
+        if (target.adoptedStyleSheets && !target.adoptedStyleSheets.includes(sh)) target.adoptedStyleSheets = [...target.adoptedStyleSheets, sh];
+      } catch { /* ignora */ }
+    };
+    for (const [d] of docSheets) if (!d.defaultView) docSheets.delete(d);
     try {
-      if (!docSheet) {
-        docSheet = new CSSStyleSheet();
-        docSheet.replaceSync(docCss());
+      adopt(document, sheetFor(document));
+      for (const c of active) {
+        if (c.isTA || c.isDocs || !c.doc.defaultView) continue;
+        const sh = sheetFor(c.doc);
+        adopt(c.doc, sh);
+        // Campos dentro de shadow DOM precisam do estilo dos sublinhados no próprio shadow root.
+        const root = c.field.getRootNode();
+        if (root && root !== c.doc) adopt(root, sh);
       }
-      if (!document.adoptedStyleSheets.includes(docSheet)) document.adoptedStyleSheets = [...document.adoptedStyleSheets, docSheet];
     } catch { /* ignora */ }
   }
 
@@ -188,6 +306,14 @@ const { ipcRenderer } = require('electron');
     .mirror .u.style { --c: var(--accent); }
     .mirror .u.on { background: color-mix(in srgb, var(--c) 20%, transparent); }
     .anim .mirror .u.fresh { animation: u-in .45s ease-out; }
+    .du { position: fixed; z-index: 2147483639; pointer-events: none; border-radius: 3px; --c: #f59e0b; transition: background-color .15s; }
+    .du::after { content: ""; position: absolute; left: 0; right: 0; bottom: -2px; height: 2px; border-radius: 2px; background: var(--c); }
+    .du.spelling { --c: #e5484d; }
+    .du.style { --c: var(--accent); }
+    .du.on { background: color-mix(in srgb, var(--c) 20%, transparent); }
+    .anim .du.fresh::after { animation: du-in .45s ease-out; }
+    @keyframes du-in { from { transform: scaleX(0); } }
+    .wrap.passthrough, .wrap.passthrough * { pointer-events: none !important; }
     @keyframes u-in { from { text-decoration-color: transparent; } }
 
     .badge {
@@ -322,9 +448,9 @@ const { ipcRenderer } = require('electron');
   }
 
   function applyTheme() {
-    if (docSheet) {
+    for (const sh of docSheets.values()) {
       try {
-        docSheet.replaceSync(docCss());
+        sh.replaceSync(docCss());
       } catch { /* ignora */ }
     }
     if (!ui.root) return;
@@ -338,44 +464,65 @@ const { ipcRenderer } = require('electron');
   }
 
   // ---------------------------------------------------------------- Realces (campos editáveis)
+  // Cada janela (a página e cada iframe cuidado daqui) tem o seu registro de realces.
+  const hlWindows = new Set();
   function updateHighlights() {
-    if (!window.CSS || !CSS.highlights || typeof Highlight !== 'function') return;
-    const groups = { spelling: [], grammar: [], style: [], punct: [] };
-    let hover = null;
+    const blank = () => ({ groups: { spelling: [], grammar: [], style: [], punct: [] }, hover: null });
+    const byWin = new Map();
+    for (const w of hlWindows) byWin.set(w, blank());
     for (const c of active) {
-      if (c.isTA || !c.ranges) continue;
+      if (c.isTA || c.isDocs || !c.ranges || !c.win) continue;
+      let e = byWin.get(c.win);
+      if (!e) byWin.set(c.win, (e = blank()));
       c.ranges.forEach((r, i) => {
         if (!r) return;
-        (groups[c.matches[i]?.kind] || groups.grammar).push(r);
-        if (i === c.hoverIndex) hover = r;
+        (e.groups[c.matches[i]?.kind] || e.groups.grammar).push(r);
+        if (i === c.hoverIndex) e.hover = r;
       });
     }
-    try {
-      for (const [k, list] of Object.entries(groups)) {
-        const name = `pulse-gr-${k}`;
-        if (list.length) CSS.highlights.set(name, new Highlight(...list));
-        else CSS.highlights.delete(name);
+    for (const [w, e] of byWin) {
+      try {
+        if (w.closed || !w.CSS || !w.CSS.highlights || typeof w.Highlight !== 'function') {
+          hlWindows.delete(w);
+          continue;
+        }
+        const reg = w.CSS.highlights;
+        for (const [k, list] of Object.entries(e.groups)) {
+          const name = `pulse-gr-${k}`;
+          if (list.length) reg.set(name, new w.Highlight(...list));
+          else reg.delete(name);
+        }
+        if (e.hover) reg.set('pulse-gr-active', new w.Highlight(e.hover));
+        else reg.delete('pulse-gr-active');
+        hlWindows.add(w);
+      } catch {
+        hlWindows.delete(w);
       }
-      if (hover) CSS.highlights.set('pulse-gr-active', new Highlight(hover));
-      else CSS.highlights.delete('pulse-gr-active');
-    } catch { /* ignora */ }
+    }
     ensureDocSheet();
   }
 
   function flashFixed(range) {
-    if (!range || !window.CSS || !CSS.highlights || !animationsOn()) return;
+    if (!range || !animationsOn()) return;
     try {
-      CSS.highlights.set('pulse-gr-fixed', new Highlight(range));
-      setTimeout(() => CSS.highlights.delete('pulse-gr-fixed'), 650);
+      const w = range.startContainer.ownerDocument.defaultView || window;
+      if (!w.CSS || !w.CSS.highlights) return;
+      w.CSS.highlights.set('pulse-gr-fixed', new w.Highlight(range));
+      setTimeout(() => w.CSS.highlights.delete('pulse-gr-fixed'), 650);
     } catch { /* ignora */ }
   }
 
   // ---------------------------------------------------------------- Verificador de um campo
   class Checker {
-    constructor(field) {
+    constructor(field, opts = {}) {
       this.field = field;
       this.id = `f${++fieldSeq}`;
-      this.isTA = field instanceof HTMLTextAreaElement;
+      this.isDocs = !!opts.docs;
+      this.isInput = field.tagName === 'INPUT';
+      this.isTA = field.tagName === 'TEXTAREA' || this.isInput;
+      this.doc = field.ownerDocument;
+      this.win = this.doc.defaultView || window;
+      this.frameEl = this.win !== window ? this.win.frameElement : null;
       this.text = '';
       this.segs = [];
       this.matches = [];
@@ -392,7 +539,15 @@ const { ipcRenderer } = require('electron');
       checkers.set(field, this);
       active.add(this);
       this.read();
-      if (this.isTA) this.buildMirror();
+      if (this.isDocs) {
+        this.layer = el('div', 'docs-layer');
+        ensureUi()?.appendChild(this.layer);
+        this.observer = new MutationObserver(() => {
+          clearTimeout(this.mutTimer);
+          this.mutTimer = setTimeout(() => this.onInput(), 250);
+        });
+        this.observer.observe(field, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-label', 'transform', 'x', 'y'] });
+      } else if (this.isTA) this.buildMirror();
       else {
         this.observer = new MutationObserver(() => {
           clearTimeout(this.mutTimer);
@@ -409,6 +564,7 @@ const { ipcRenderer } = require('electron');
       clearTimeout(this.mutTimer);
       this.observer?.disconnect();
       if (this.mirror) this.mirror.remove();
+      if (this.layer) this.layer.remove();
       if (this.onScroll) this.field.removeEventListener('scroll', this.onScroll);
       active.delete(this);
       checkers.delete(this.field);
@@ -418,10 +574,46 @@ const { ipcRenderer } = require('electron');
       renderBadge();
     }
 
+    // Campos de iframes cuidados daqui: as posições do iframe somam-se às do campo.
+    offset() {
+      return this.frameEl ? docOffset(this.doc) : { x: 0, y: 0 };
+    }
+
+    fieldRect() {
+      const r = this.field.getBoundingClientRect();
+      const o = this.offset();
+      return { left: r.left + o.x, right: r.right + o.x, top: r.top + o.y, bottom: r.bottom + o.y, width: r.width, height: r.height };
+    }
+
+    visible() {
+      const v = visibleRect(this.field);
+      if (!v || !this.frameEl) return v;
+      const o = this.offset();
+      const out = { top: v.top + o.y, left: v.left + o.x, bottom: v.bottom + o.y, right: v.right + o.x };
+      // Recorta por cada iframe no caminho até a página.
+      let fe = this.frameEl;
+      for (let i = 0; fe && i < 6; i++) {
+        const fv = visibleRect(fe);
+        if (!fv) return null;
+        const fo = docOffset(fe.ownerDocument);
+        out.top = Math.max(out.top, fv.top + fo.y);
+        out.left = Math.max(out.left, fv.left + fo.x);
+        out.bottom = Math.min(out.bottom, fv.bottom + fo.y);
+        out.right = Math.min(out.right, fv.right + fo.x);
+        const w = fe.ownerDocument.defaultView;
+        fe = w && w !== window ? w.frameElement : null;
+      }
+      return out.bottom - out.top < 2 || out.right - out.left < 2 ? null : out;
+    }
+
     // Lê o texto do campo (e, em campos editáveis, guarda onde está cada pedaço no DOM).
     read() {
       if (this.isTA) {
         this.text = this.field.value;
+        return;
+      }
+      if (this.isDocs) {
+        this.readDocs();
         return;
       }
       const segs = [];
@@ -457,6 +649,104 @@ const { ipcRenderer } = require('electron');
       this.segs = segs;
     }
 
+    // Google Docs: cada <rect aria-label> da camada SVG é um trecho de uma linha; cada <g> é um parágrafo.
+    readDocs() {
+      const segs = [];
+      let text = '';
+      for (const g of this.field.querySelectorAll('.kix-canvas-tile-content svg g[role="paragraph"]')) {
+        let prev = null;
+        for (const r of g.querySelectorAll('rect[aria-label]')) {
+          const label = r.getAttribute('aria-label') || '';
+          if (!label) continue;
+          const x = parseFloat(r.getAttribute('x')) || 0;
+          const y = parseFloat(r.getAttribute('y')) || 0;
+          const w = parseFloat(r.getAttribute('width')) || 0;
+          const tf = r.getAttribute('transform') || '';
+          if (!prev && text) text += '\n';
+          if (prev) {
+            const sameLine = prev.tf === tf && Math.abs(prev.y - y) < 1;
+            if ((!sameLine || x - (prev.x + prev.w) > 1.5) && !/\s$/.test(text) && !/^\s/.test(label)) text += ' ';
+          }
+          segs.push({ node: r, start: text.length, end: text.length + label.length, label, font: r.getAttribute('data-font-css') || '' });
+          text += label;
+          prev = { x, y, w, tf };
+        }
+      }
+      this.text = text;
+      this.segs = segs;
+    }
+
+    // Retângulos (na tela) de um trecho do texto do Docs, medindo as letras com a fonte de cada trecho.
+    docsRects(a, b) {
+      const out = [];
+      for (const s of this.segs) {
+        if (s.end <= a || s.start >= b || !s.node.isConnected) continue;
+        const box = s.node.getBoundingClientRect();
+        const full = textWidth(s.font, s.label) || 1;
+        const k = box.width / full;
+        const i0 = Math.max(0, a - s.start);
+        const i1 = Math.min(s.label.length, b - s.start);
+        const x0 = box.left + textWidth(s.font, s.label.slice(0, i0)) * k;
+        const x1 = box.left + textWidth(s.font, s.label.slice(0, i1)) * k;
+        out.push({ left: x0, right: x1, top: box.top, bottom: box.bottom, width: x1 - x0, height: box.height });
+      }
+      return out;
+    }
+
+    renderDocs() {
+      const layer = this.layer;
+      if (!layer) return;
+      if (!layer.isConnected) ensureUi()?.appendChild(layer);
+      layer.textContent = '';
+      const vis = visibleRect(this.field);
+      if (!vis) return;
+      const fresh = Date.now() < this.freshUntil;
+      this.matches.forEach((m, i) => {
+        for (const r of this.docsRects(m.offset, m.offset + m.length)) {
+          if (r.bottom < vis.top || r.top > vis.bottom || r.right < vis.left || r.left > vis.right) continue;
+          const d = el('div', `du ${m.kind}${i === this.hoverIndex ? ' on' : ''}${fresh ? ' fresh' : ''}`);
+          d.style.left = `${r.left}px`;
+          d.style.top = `${r.top}px`;
+          d.style.width = `${Math.max(4, r.width)}px`;
+          d.style.height = `${r.height}px`;
+          layer.appendChild(d);
+        }
+      });
+    }
+
+    async applyDocs(index, value) {
+      const m = this.matches[index];
+      if (!m) return false;
+      this.read();
+      if (this.text.slice(m.offset, m.offset + m.length) !== m.word) {
+        this.schedule(0);
+        return false;
+      }
+      const rects = this.docsRects(m.offset, m.offset + m.length);
+      if (!rects.length) return false;
+      const a = rects[0];
+      const b = rects[rects.length - 1];
+      // Seleciona a palavra com um clique e shift+clique de verdade e digita a sugestão.
+      ui.root?.classList.add('passthrough');
+      let ok = false;
+      try {
+        ok = await ipcRenderer.invoke('grammar:docs-replace', {
+          x1: a.left + 0.5, y1: (a.top + a.bottom) / 2, x2: b.right - 0.5, y2: (b.top + b.bottom) / 2, text: value,
+        });
+      } catch {
+        ok = false;
+      } finally {
+        setTimeout(() => ui.root?.classList.remove('passthrough'), 120);
+      }
+      if (!ok) return false;
+      this.matches = this.matches.filter((x) => x !== m);
+      this.hoverIndex = -1;
+      this.render();
+      this.setStatus(this.matches.length ? 'issues' : 'ok');
+      this.schedule(1200);
+      return true;
+    }
+
     posAt(off, isEnd) {
       const segs = this.segs;
       let lo = 0;
@@ -479,7 +769,7 @@ const { ipcRenderer } = require('electron');
       const b = this.posAt(offset + length, true);
       if (!a || !b) return null;
       try {
-        const r = document.createRange();
+        const r = this.doc.createRange();
         r.setStart(a.node, a.offset);
         r.setEnd(b.node, b.offset);
         return r;
@@ -507,7 +797,8 @@ const { ipcRenderer } = require('electron');
 
     caretOffset() {
       if (this.isTA) return this.field.selectionEnd ?? -1;
-      const sel = getSelection();
+      if (this.isDocs) return -1;
+      const sel = selFor(this.field);
       if (!sel || !sel.rangeCount || !this.field.contains(sel.focusNode)) return -1;
       return this.offsetOf(sel.focusNode, sel.focusOffset);
     }
@@ -517,11 +808,12 @@ const { ipcRenderer } = require('electron');
         this.field.setSelectionRange(offset, offset);
         return;
       }
+      if (this.isDocs) return;
       this.read();
       const p = this.posAt(offset, true);
       if (!p) return;
-      const sel = getSelection();
-      const r = document.createRange();
+      const sel = selFor(this.field);
+      const r = this.doc.createRange();
       r.setStart(p.node, p.offset);
       r.collapse(true);
       sel.removeAllRanges();
@@ -535,7 +827,10 @@ const { ipcRenderer } = require('electron');
       }
       const old = this.text;
       this.read();
-      if (old === this.text) return;
+      if (old === this.text) {
+        if (this.isDocs) this.render();
+        return;
+      }
       this.matches = rebase(this.matches, old, this.text);
       if (this.hoverIndex >= this.matches.length) this.hoverIndex = -1;
       hideCard();
@@ -562,7 +857,7 @@ const { ipcRenderer } = require('electron');
       if (!usable()) return;
       this.read();
       const text = this.text;
-      if (text.trim().length < 3) {
+      if (text.trim().length < 3 || (this.isInput && !/\S\s+\S/.test(text))) {
         this.matches = [];
         this.render();
         this.setStatus('idle');
@@ -605,7 +900,8 @@ const { ipcRenderer } = require('electron');
     }
 
     render() {
-      if (this.isTA) this.renderMirror();
+      if (this.isDocs) this.renderDocs();
+      else if (this.isTA) this.renderMirror();
       else {
         this.ranges = this.matches.map((m) => this.rangeFor(m.offset, m.length));
         updateHighlights();
@@ -631,7 +927,7 @@ const { ipcRenderer } = require('electron');
       const m = this.mirror;
       if (!m) return;
       const f = this.field;
-      const cs = getComputedStyle(f);
+      const cs = this.win.getComputedStyle(f);
       if (!f.isConnected || cs.display === 'none' || cs.visibility === 'hidden') {
         m.style.display = 'none';
         return;
@@ -640,7 +936,14 @@ const { ipcRenderer } = require('electron');
         'textIndent', 'textTransform', 'textAlign', 'direction', 'tabSize', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
         'whiteSpace', 'wordBreak', 'overflowWrap', 'textRendering'];
       for (const p of props) if (m.style[p] !== cs[p]) m.style[p] = cs[p];
-      const r = f.getBoundingClientRect();
+      if (this.isInput) {
+        // Uma linha só, centralizada na altura como o texto do próprio campo.
+        m.style.whiteSpace = 'pre';
+        m.style.overflowWrap = 'normal';
+        const inner = f.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0);
+        m.style.lineHeight = `${Math.max(1, inner)}px`;
+      }
+      const r = this.fieldRect();
       const bl = parseFloat(cs.borderLeftWidth) || 0;
       const bt = parseFloat(cs.borderTopWidth) || 0;
       m.style.display = '';
@@ -649,7 +952,7 @@ const { ipcRenderer } = require('electron');
       m.style.width = `${f.clientWidth}px`;
       m.style.height = `${f.clientHeight}px`;
       // Recorta o que estiver escondido por áreas roláveis da página.
-      const vis = visibleRect(f);
+      const vis = this.visible();
       if (!vis) {
         m.style.display = 'none';
         return;
@@ -690,8 +993,14 @@ const { ipcRenderer } = require('electron');
         const span = this.mirror?.querySelector(`.u[data-i="${i}"]`);
         return span ? [...span.getClientRects()] : [];
       }
+      if (this.isDocs) {
+        const m = this.matches[i];
+        return m ? this.docsRects(m.offset, m.offset + m.length) : [];
+      }
       const r = this.ranges[i];
-      return r ? [...r.getClientRects()] : [];
+      if (!r) return [];
+      const o = this.offset();
+      return [...r.getClientRects()].map((b) => ({ left: b.left + o.x, right: b.right + o.x, top: b.top + o.y, bottom: b.bottom + o.y, width: b.width, height: b.height }));
     }
 
     matchAt(x, y) {
@@ -706,7 +1015,9 @@ const { ipcRenderer } = require('electron');
     setHover(i) {
       if (this.hoverIndex === i) return;
       this.hoverIndex = i;
-      if (this.isTA) {
+      if (this.isDocs) {
+        this.renderDocs();
+      } else if (this.isTA) {
         this.mirror?.querySelectorAll('.u.on').forEach((s) => s.classList.remove('on'));
         if (i >= 0) this.mirror?.querySelector(`.u[data-i="${i}"]`)?.classList.add('on');
       } else {
@@ -716,6 +1027,7 @@ const { ipcRenderer } = require('electron');
 
     // Troca o trecho errado pela sugestão (com desfazer funcionando, via insertText).
     apply(index, value, { keepCaret = false } = {}) {
+      if (this.isDocs) return this.applyDocs(index, value);
       const m = this.matches[index];
       if (!m) return false;
       this.read();
@@ -730,7 +1042,7 @@ const { ipcRenderer } = require('electron');
         ta.focus({ preventScroll: true });
         ta.setSelectionRange(m.offset, m.offset + m.length);
         try {
-          ok = value ? document.execCommand('insertText', false, value) : document.execCommand('delete');
+          ok = value ? this.doc.execCommand('insertText', false, value) : this.doc.execCommand('delete');
         } catch {
           ok = false;
         }
@@ -742,22 +1054,22 @@ const { ipcRenderer } = require('electron');
         const range = this.rangeFor(m.offset, m.length);
         if (!range) return false;
         this.field.focus({ preventScroll: true });
-        const sel = getSelection();
+        const sel = selFor(this.field);
         sel.removeAllRanges();
         sel.addRange(range);
         try {
-          ok = value ? document.execCommand('insertText', false, value) : document.execCommand('delete');
+          ok = value ? this.doc.execCommand('insertText', false, value) : this.doc.execCommand('delete');
         } catch {
           ok = false;
         }
         if (!ok) {
           range.deleteContents();
-          if (value) range.insertNode(document.createTextNode(value));
+          if (value) range.insertNode(this.doc.createTextNode(value));
           this.field.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertReplacementText', data: value }));
         }
       }
       this.onInput();
-      if (!this.isTA) flashFixed(this.rangeFor(m.offset, value.length));
+      if (!this.isTA && !this.isDocs) flashFixed(this.rangeFor(m.offset, value.length));
       if (keepCaret && caret >= 0) {
         const delta = value.length - m.length;
         this.setCaret(caret > m.offset ? caret + delta : caret);
@@ -769,7 +1081,20 @@ const { ipcRenderer } = require('electron');
       return this.matches.filter((m) => m.replacements.length && m.kind !== 'style');
     }
 
+    async fixAllDocs() {
+      const targets = this.fixable().sort((a, b) => b.offset - a.offset);
+      let n = 0;
+      for (const m of targets) {
+        const i = this.matches.indexOf(m);
+        if (i >= 0 && await this.applyDocs(i, m.replacements[0])) n++;
+        await new Promise((r) => setTimeout(r, 450));
+      }
+      if (ui.panel && ui.panel.checker === this) renderPanel(this);
+      return n;
+    }
+
     fixAll() {
+      if (this.isDocs) return this.fixAllDocs();
       const targets = this.fixable().sort((a, b) => b.offset - a.offset);
       let n = 0;
       for (const m of targets) {
@@ -803,15 +1128,47 @@ const { ipcRenderer } = require('electron');
     }
   }
 
+  // Deslocamento das coordenadas de um iframe cuidado daqui (mesmo aninhado) até a página.
+  function docOffset(doc) {
+    let x = 0;
+    let y = 0;
+    try {
+      for (let i = 0; doc && doc !== document && i < 6; i++) {
+        const fe = doc.defaultView && doc.defaultView.frameElement;
+        if (!fe) break;
+        const r = fe.getBoundingClientRect();
+        const cs = fe.ownerDocument.defaultView.getComputedStyle(fe);
+        x += r.left + fe.clientLeft + (parseFloat(cs.paddingLeft) || 0);
+        y += r.top + fe.clientTop + (parseFloat(cs.paddingTop) || 0);
+        doc = fe.ownerDocument;
+      }
+    } catch { /* ignora */ }
+    return { x, y };
+  }
+
+  let measureCtx = null;
+  function textWidth(font, s) {
+    if (!s) return 0;
+    if (!measureCtx) measureCtx = document.createElement('canvas').getContext('2d');
+    if (measureCtx.__font !== font) {
+      measureCtx.font = font || '14px Arial';
+      measureCtx.__font = font;
+    }
+    return measureCtx.measureText(s).width;
+  }
+
   function visibleRect(node) {
+    const doc = node.ownerDocument || document;
+    const w = doc.defaultView || window;
     let r = node.getBoundingClientRect();
+    if (node === doc.body) r = { top: 0, left: 0, bottom: w.innerHeight, right: w.innerWidth };
     let top = Math.max(0, r.top);
     let left = Math.max(0, r.left);
-    let bottom = Math.min(window.innerHeight, r.bottom);
-    let right = Math.min(window.innerWidth, r.right);
+    let bottom = Math.min(w.innerHeight, r.bottom);
+    let right = Math.min(w.innerWidth, r.right);
     let p = node.parentElement;
-    for (let depth = 0; p && p !== document.body && depth < 25; depth++, p = p.parentElement) {
-      const cs = getComputedStyle(p);
+    for (let depth = 0; p && p !== doc.body && depth < 25; depth++, p = p.parentElement) {
+      const cs = w.getComputedStyle(p);
       if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
       r = p.getBoundingClientRect();
       top = Math.max(top, r.top);
@@ -834,7 +1191,7 @@ const { ipcRenderer } = require('electron');
       return { cls: `issues${hard ? '' : styleOnly ? ' styleonly' : ' soft'}`, text: issues > 99 ? '99+' : String(issues), title: `${issues} sugestão(ões) — clique para ver` };
     }
     if (c.status === 'ok') return { cls: 'ok', icon: ICON.check, title: 'Tudo certo!' };
-    return { cls: '', icon: ICON.spell, title: 'Corretor do PulseBrowser' };
+    return { cls: '', icon: ICON.spell, title: 'Corretor do tuff.browse' };
   }
 
   function renderBadge() {
@@ -879,14 +1236,14 @@ const { ipcRenderer } = require('electron');
     const b = ui.badge;
     const c = focused;
     if (!b || !c) return;
-    const r = c.field.getBoundingClientRect();
-    const vis = visibleRect(c.field);
+    const r = c.field === c.doc.body ? c.visible() || c.fieldRect() : c.fieldRect();
+    const vis = c.visible();
     if (!vis) {
       b.style.display = 'none';
       return;
     }
     b.style.display = '';
-    const scrollbar = c.isTA ? Math.max(0, c.field.offsetWidth - c.field.clientWidth - 2) : 0;
+    const scrollbar = c.isTA || c.isDocs ? Math.max(0, c.field.offsetWidth - c.field.clientWidth - 2) : 0;
     const left = Math.min(vis.right, r.right) - 30 - scrollbar;
     const top = r.height < 46 ? r.top + (r.height - 24) / 2 : Math.min(vis.bottom, r.bottom) - 30;
     b.style.left = `${Math.round(left)}px`;
@@ -1044,7 +1401,7 @@ const { ipcRenderer } = require('electron');
     const logo = el('div', 'logo');
     logo.appendChild(svgIcon(ICON.spell, 17));
     const titles = el('div', 'grow');
-    titles.appendChild(el('div', 'p-title', 'Corretor do PulseBrowser'));
+    titles.appendChild(el('div', 'p-title', 'Corretor do tuff.browse'));
     const n = c.matches.length;
     let sub;
     if (c.status === 'checking') sub = 'Verificando o texto...';
@@ -1121,7 +1478,7 @@ const { ipcRenderer } = require('electron');
     }
     select.addEventListener('change', () => {
       ipcRenderer.send('grammar:set-language', select.value);
-      setTimeout(() => c.field.focus({ preventScroll: true }), 0);
+      if (!c.isDocs) setTimeout(() => c.field.focus({ preventScroll: true }), 0);
     });
     line.append(label, select);
     foot.appendChild(line);
@@ -1141,7 +1498,7 @@ const { ipcRenderer } = require('electron');
     foot.appendChild(el('div', 'note', `Verificação feita pelo ${config?.server || 'LanguageTool'}.`));
     p.appendChild(foot);
 
-    const anchor = ui.badge ? ui.badge.getBoundingClientRect() : c.field.getBoundingClientRect();
+    const anchor = ui.badge ? ui.badge.getBoundingClientRect() : c.fieldRect();
     place(p, anchor, { prefer: 'above', align: 'right', gap: 8 });
   }
 
@@ -1151,54 +1508,77 @@ const { ipcRenderer } = require('electron');
     return checkers.get(field) || new Checker(field);
   }
 
-  document.addEventListener('focusin', (e) => {
-    const t = e.target;
+  let docs = null;
+  function docsChecker() {
+    return docs && docs.field.isConnected && active.has(docs) ? docs : null;
+  }
+
+  const onFocusIn = (e) => {
+    const t = deepTarget(e);
     if (insideOurUi(t)) return;
+    if (t && (t.tagName === 'IFRAME' || t.tagName === 'FRAME')) scanFrames();
     const field = editingHost(t);
     if (!field) return;
     loadConfig().then(() => {
-      if (!usable() || document.activeElement !== t) return;
+      if (!usable() || deepActive() !== t) return;
       const c = activate(field);
       if (!c) return;
       focused = c;
       renderBadge();
       if (c.status === 'idle' && c.text.trim().length >= 3) c.schedule(200);
     });
-  }, true);
+  };
 
-  document.addEventListener('focusout', () => {
+  const onFocusOut = () => {
     setTimeout(() => {
-      const a = document.activeElement;
+      const a = deepActive();
       if (insideOurUi(a)) return;
       const field = editingHost(a);
       if (focused && field === focused.field) return;
+      const next = (field ? checkers.get(field) : null) || docsChecker();
+      if (next === focused) return;
       if (ui.panel) hidePanel();
-      focused = field ? checkers.get(field) || null : null;
+      focused = next || null;
       renderBadge();
     }, 150);
-  }, true);
+  };
 
-  document.addEventListener('input', (e) => {
-    const field = editingHost(e.target);
+  const onInputEv = (e) => {
+    const field = editingHost(deepTarget(e));
     const c = field && checkers.get(field);
     if (c) c.onInput();
-  }, true);
+  };
 
   let moveRaf = 0;
   let lastMove = null;
-  document.addEventListener('mousemove', (e) => {
+  // Para o Docs: o mouse está sobre a área do documento?
+  function checkerAtPoint(target, x, y) {
+    const field = editingHost(target);
+    const c = field && checkers.get(field);
+    if (c) return c;
+    const d = docsChecker();
+    if (!d) return null;
+    const r = d.field.getBoundingClientRect();
+    return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom ? d : null;
+  }
+
+
+  const onMouseMove = (e) => {
     lastMove = e;
     if (moveRaf) return;
     moveRaf = requestAnimationFrame(() => {
       moveRaf = 0;
       const ev = lastMove;
-      if (!ev || insideOurUi(ev.target)) {
+      const target = ev && deepTarget(ev);
+      if (!ev || insideOurUi(target)) {
         clearTimeout(hideTimer);
         return;
       }
-      const field = editingHost(ev.target);
-      const c = field && checkers.get(field);
-      const i = c ? c.matchAt(ev.clientX, ev.clientY) : -1;
+      const o = docOffset(target && target.ownerDocument);
+      const x = ev.clientX + o.x;
+      const y = ev.clientY + o.y;
+      const c = checkerAtPoint(target, x, y);
+      const i = c ? c.matchAt(x, y) : -1;
       if (c && i >= 0) {
         clearTimeout(hideTimer);
         if (ui.card && ui.card.checker === c && c.hoverIndex === i) return;
@@ -1209,38 +1589,95 @@ const { ipcRenderer } = require('electron');
         if (ui.card) scheduleHide();
       }
     });
-  }, { passive: true });
+  };
 
-  document.addEventListener('mouseup', (e) => {
-    if (e.button !== 0 || insideOurUi(e.target)) return;
-    const field = editingHost(e.target);
-    const c = field && checkers.get(field);
+  const onMouseUp = (e) => {
+    const target = deepTarget(e);
+    if (e.button !== 0 || insideOurUi(target)) return;
+    if (ui.root && ui.root.classList.contains('passthrough')) return;
+    const o = docOffset(target && target.ownerDocument);
+    const x = e.clientX + o.x;
+    const y = e.clientY + o.y;
+    const c = checkerAtPoint(target, x, y);
     if (!c) return;
-    const sel = getSelection();
-    if (sel && !sel.isCollapsed && !c.isTA) return;
-    const i = c.matchAt(e.clientX, e.clientY);
+    const sel = c.isTA || c.isDocs ? null : selFor(c.field);
+    if (sel && !sel.isCollapsed) return;
+    const i = c.matchAt(x, y);
     if (i >= 0) {
       clearTimeout(cardTimer);
       showCard(c, i);
     }
-  }, true);
+  };
 
-  document.addEventListener('keydown', (e) => {
+  const onKeyDown = (e) => {
     if (e.key === 'Escape' && (ui.card || ui.panel)) {
       hideCard();
       hidePanel();
       return;
     }
-    if (ui.card && !insideOurUi(e.target)) hideCard();
-  }, true);
+    if (ui.card && !insideOurUi(deepTarget(e))) hideCard();
+  };
 
   const reposition = () => {
-    for (const c of active) if (c.mirror) c.syncMirror();
+    for (const c of active) {
+      if (c.mirror) c.syncMirror();
+      else if (c.isDocs && c.matches.length) c.renderDocs();
+    }
     positionBadge();
     if (ui.card) hideCard(true);
   };
-  window.addEventListener('scroll', () => requestAnimationFrame(reposition), { capture: true, passive: true });
-  window.addEventListener('resize', () => requestAnimationFrame(reposition), { passive: true });
+  const onScroll = () => requestAnimationFrame(reposition);
+
+  function listen(doc) {
+    const w = doc.defaultView;
+    doc.addEventListener('focusin', onFocusIn, true);
+    doc.addEventListener('focusout', onFocusOut, true);
+    doc.addEventListener('input', onInputEv, true);
+    doc.addEventListener('keydown', onKeyDown, true);
+    if (w) {
+      w.addEventListener('mousemove', onMouseMove, { passive: true, capture: true });
+      w.addEventListener('mouseup', onMouseUp, true);
+      w.addEventListener('scroll', onScroll, { capture: true, passive: true });
+    }
+  }
+  listen(document);
+  window.addEventListener('resize', onScroll, { passive: true });
+
+  // Iframes do mesmo site criados com document.write (TinyMCE, CKEditor 4...) não recebem
+  // este script; a página de cima cuida deles.
+  const adoptedDocs = new WeakSet();
+  function scanFrames(root = document, depth = 0) {
+    if (depth > 3) return;
+    let list = [];
+    try {
+      list = root.querySelectorAll('iframe, frame');
+    } catch {
+      return;
+    }
+    for (const f of list) {
+      let d = null;
+      try {
+        d = f.contentDocument;
+      } catch { /* outro site */ }
+      if (!d || !d.documentElement) continue;
+      if (!adoptedDocs.has(d)) {
+        let own = false;
+        try {
+          own = !!d.__tuffGrammar;
+        } catch { /* ignora */ }
+        if (own || DOCS) continue;
+        adoptedDocs.add(d);
+        listen(d);
+        // Se o cursor já estava num campo do iframe, começa agora.
+        const a = deepActive(d);
+        if (editingHost(a)) onFocusIn({ target: a, composedPath: () => [a] });
+      }
+      scanFrames(d, depth + 1);
+    }
+  }
+  setInterval(() => {
+    if (document.querySelector('iframe, frame')) scanFrames();
+  }, 2000);
 
   // Tarefa periódica: limpa campos removidos e acompanha mudanças de tamanho e de valor.
   function startTick() {
@@ -1259,10 +1696,10 @@ const { ipcRenderer } = require('electron');
         if (c.isTA) {
           if (c.field.value !== c.text) c.onInput();
           c.syncMirror();
-        }
+        } else if (c.isDocs && c.matches.length) c.renderDocs();
       }
       positionBadge();
-      if (CSS.highlights && [...active].some((c) => !c.isTA && c.matches.length)) ensureDocSheet();
+      if (CSS.highlights && [...active].some((c) => !c.isTA && !c.isDocs && c.matches.length)) ensureDocSheet();
       if (ui.host && !ui.host.isConnected && document.documentElement) document.documentElement.appendChild(ui.host);
     }, 700);
   }
@@ -1284,6 +1721,21 @@ const { ipcRenderer } = require('electron');
       if (ui.panel) renderPanel(ui.panel.checker);
     });
   });
+
+  // Google Docs: procura o editor (ele é montado depois do carregamento) e verifica o documento inteiro.
+  if (DOCS) {
+    setInterval(() => {
+      if (docsChecker()) return;
+      const ed = document.querySelector('.kix-appview-editor');
+      if (!ed || !ed.querySelector('.kix-canvas-tile-content svg rect[aria-label]')) return;
+      loadConfig().then(() => {
+        if (!usable() || docsChecker()) return;
+        docs = new Checker(ed, { docs: true });
+        if (!focused) focused = docs;
+        renderBadge();
+      });
+    }, 1500);
+  }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => loadConfig(), { once: true });
   else loadConfig();

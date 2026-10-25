@@ -85,7 +85,7 @@ function findPulseWindow(wc) {
 function attach(ses) {
   ses.setPermissionRequestHandler((wc, permission, callback, details) => {
     const url = details?.requestingUrl || wc?.getURL() || '';
-    if (url.startsWith('pulse:')) return callback(true);
+    if (url.startsWith('tuff:')) return callback(true);
     if (ALWAYS_ALLOW.has(permission)) return callback(true);
     const key = permissionKey(permission, details);
     if (!ASKABLE.has(key)) return callback(permission !== 'unknown');
@@ -124,7 +124,7 @@ function attach(ses) {
   });
 
   ses.setPermissionCheckHandler((_wc, permission, requestingOrigin, details) => {
-    if ((requestingOrigin || '').startsWith('pulse:')) return true;
+    if ((requestingOrigin || '').startsWith('tuff:')) return true;
     if (ALWAYS_ALLOW.has(permission)) return true;
     let key = permission;
     if (permission === 'media') key = details?.mediaType === 'video' ? 'camera' : 'microphone';

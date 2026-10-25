@@ -18,7 +18,7 @@
       <a href="#appearance" data-icon="palette">Aparência</a>
       <a href="#startup" data-icon="rocket">Ao iniciar e abas</a>
       <a href="#search" data-icon="search">Pesquisa</a>
-      <a href="#shield" data-icon="shield">Pulse Shield</a>
+      <a href="#shield" data-icon="shield">tuff Shield</a>
       <a href="#privacy" data-icon="lock">Privacidade e segurança</a>
       <a href="#accounts" data-icon="user">Senhas e contas</a>
       <a href="#grammar" data-icon="spellCheck">Corretor gramatical</a>
@@ -28,7 +28,7 @@
       <a href="#languages" data-icon="type">Idiomas</a>
       <a href="#extensions" data-icon="puzzle">Extensões</a>
       <a href="#default" data-icon="monitor">Navegador padrão</a>
-      <a href="pulse://about/" data-icon="info">Sobre o PulseBrowser</a>
+      <a href="tuff://about/" data-icon="info">Sobre o tuff.browse</a>
     </nav>
 
     <main class="content" id="content">
@@ -82,7 +82,7 @@
         <h2>Ao iniciar e abas</h2>
         <div class="card">
           <div class="setting col" data-k="iniciar inicialização restaurar continuar">
-            <div class="text"><div class="title">Ao abrir o PulseBrowser</div></div>
+            <div class="text"><div class="title">Ao abrir o tuff.browse</div></div>
             <div class="radios">
               <label><input type="radio" name="startup" value="newtab"> Abrir a página Nova aba</label>
               <label><input type="radio" name="startup" value="restore"> Continuar de onde parei</label>
@@ -92,7 +92,7 @@
           </div>
           <div class="setting" data-k="página inicial home">
             <div class="text"><div class="title">Página inicial</div><div class="desc">Aberta pelo botão Página inicial (Alt+Home)</div></div>
-            <input class="input" style="max-width:320px" id="homepage" placeholder="pulse://newtab">
+            <input class="input" style="max-width:320px" id="homepage" placeholder="tuff://newtab">
           </div>
           <div class="setting" data-k="fechar abas confirmar">
             <div class="text"><div class="title">Confirmar ao fechar uma janela com várias abas</div></div>
@@ -118,7 +118,7 @@
 
       <!-- Shield -->
       <section id="shield">
-        <h2>Pulse Shield</h2>
+        <h2>tuff Shield</h2>
         <div class="card">
           <div class="setting shield-hero" data-k="shield bloqueador anúncios rastreadores">
             <div class="hero-icon" data-icon="shieldCheck" data-size="26"></div>
@@ -198,7 +198,7 @@
           </div>
           <div id="g-others"></div>
           <div class="setting" data-k="compatibilidade login google navegador seguro bloqueado">
-            <div class="text"><div class="title">Modo de compatibilidade do login do Google</div><div class="desc">O Google às vezes recusa logins de navegadores que ele não conhece ("este navegador pode não ser seguro"). Com esta opção, só a página de login do Google vê o PulseBrowser como um navegador compatível.</div></div>
+            <div class="text"><div class="title">Modo de compatibilidade do login do Google</div><div class="desc">O Google às vezes recusa logins de navegadores que ele não conhece ("este navegador pode não ser seguro"). Com esta opção, só a página de login do Google vê o tuff.browse como um navegador compatível.</div></div>
             <label class="switch"><input type="checkbox" data-setting="googleCompat"></label>
           </div>
         </div>
@@ -213,7 +213,7 @@
           </div>
           <div class="setting" data-k="gerenciar senhas salvas lista importar exportar verificar">
             <div class="text"><div class="title">Senhas salvas</div><div class="desc" id="pw-count">—</div></div>
-            <a class="btn" href="pulse://passwords/"><span data-icon="key" data-size="16"></span>Gerenciar senhas</a>
+            <a class="btn" href="tuff://passwords/"><span data-icon="key" data-size="16"></span>Gerenciar senhas</a>
           </div>
         </div>
       </section>
@@ -296,11 +296,11 @@
             <label class="switch"><input type="checkbox" data-setting="memorySaver"></label>
           </div>
           <div class="setting" data-k="aceleração hardware gpu">
-            <div class="text"><div class="title">Usar aceleração de hardware quando disponível</div><div class="desc restart-note" hidden>Reinicie o PulseBrowser para aplicar</div></div>
+            <div class="text"><div class="title">Usar aceleração de hardware quando disponível</div><div class="desc restart-note" hidden>Reinicie o tuff.browse para aplicar</div></div>
             <label class="switch"><input type="checkbox" data-setting="hardwareAcceleration" data-restart></label>
           </div>
           <div class="setting" data-k="rolagem suave scroll">
-            <div class="text"><div class="title">Rolagem suave</div><div class="desc restart-note" hidden>Reinicie o PulseBrowser para aplicar</div></div>
+            <div class="text"><div class="title">Rolagem suave</div><div class="desc restart-note" hidden>Reinicie o tuff.browse para aplicar</div></div>
             <label class="switch"><input type="checkbox" data-setting="smoothScrolling" data-restart></label>
           </div>
           <div class="setting" id="restart-row" hidden>
@@ -327,7 +327,14 @@
 
       <!-- Extensões -->
       <section id="extensions">
-        <h2>Extensões <span class="beta">beta</span></h2>
+        <h2>Extensões</h2>
+        <div class="card">
+          <div class="setting" data-k="extensões tuff criar javascript scripts">
+            <div class="text"><div class="title">Extensões do tuff.browse</div><div class="desc">Crie e edite extensões com JavaScript e CSS que rodam em qualquer site e até na nova aba, com botão fixo na barra</div></div>
+            <a class="btn primary" href="tuff://extensions/">Gerenciar extensões</a>
+          </div>
+        </div>
+        <h2>Extensões do Chrome <span class="beta">beta</span></h2>
         <div class="card">
           <div class="setting" data-k="extensões chrome carregar">
             <div class="text"><div class="title">Carregar extensão descompactada</div><div class="desc">Suporte parcial a extensões do Chrome (Manifest V2/V3): scripts de conteúdo e páginas de opções funcionam; pop-ups da barra de ferramentas ainda não.</div></div>
@@ -342,7 +349,7 @@
         <h2>Navegador padrão</h2>
         <div class="card">
           <div class="setting" data-k="navegador padrão default">
-            <div class="text"><div class="title">Tornar o PulseBrowser o navegador padrão</div><div class="desc">Registra o PulseBrowser no Windows e abre as configurações de Aplicativos padrão para você confirmar</div></div>
+            <div class="text"><div class="title">Tornar o tuff.browse o navegador padrão</div><div class="desc">Registra o tuff.browse no Windows e abre as configurações de Aplicativos padrão para você confirmar</div></div>
             <button class="btn primary" id="make-default">Tornar padrão</button>
           </div>
         </div>

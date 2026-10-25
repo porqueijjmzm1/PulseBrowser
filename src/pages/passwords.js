@@ -1,5 +1,5 @@
 'use strict';
-// pulse://passwords — lista, edição, verificação, importação e exportação das senhas salvas.
+// tuff://passwords — lista, edição, verificação, importação e exportação das senhas salvas.
 (async () => {
   const { $, $$, esc, icon, toast, colorFor } = window.Pulse;
   await window.Pulse.init();
@@ -212,7 +212,7 @@
     box.textContent = '';
     const list = data.logins.filter((l) => matches(l, q));
     if (!n) {
-      box.innerHTML = `<div class="empty"><div class="big">${icon('key', 28)}</div><b>Nenhuma senha salva ainda</b>Quando você entrar em um site, o PulseBrowser oferece para guardar a senha. Você também pode adicionar uma senha ou importar de outro navegador.</div>`;
+      box.innerHTML = `<div class="empty"><div class="big">${icon('key', 28)}</div><b>Nenhuma senha salva ainda</b>Quando você entrar em um site, o tuff.browse oferece para guardar a senha. Você também pode adicionar uma senha ou importar de outro navegador.</div>`;
     } else if (!list.length) {
       box.innerHTML = `<div class="empty"><div class="big">${icon('search', 26)}</div><b>Nada encontrado</b>Nenhuma senha corresponde a “${esc(q)}”.</div>`;
     } else {

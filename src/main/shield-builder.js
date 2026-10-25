@@ -1,5 +1,5 @@
 'use strict';
-// Processo separado (utilityProcess) que monta o motor de filtros do Pulse Shield.
+// Processo separado (utilityProcess) que monta o motor de filtros do tuff Shield.
 // Ler e compilar ~400 mil regras leva cerca de 1 segundo; aqui isso não trava o navegador.
 const fs = require('fs');
 const { FiltersEngine } = require('@ghostery/adblocker');

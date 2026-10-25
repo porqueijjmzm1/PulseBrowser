@@ -208,7 +208,7 @@ class Bookmarks extends EventEmitter {
     return `<!DOCTYPE NETSCAPE-Bookmark-file-1>
 <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
 <TITLE>Bookmarks</TITLE>
-<H1>Favoritos do PulseBrowser</H1>
+<H1>Favoritos do tuff.browse</H1>
 <DL><p>
 ${render(this.roots, 1)}</DL><p>
 `;

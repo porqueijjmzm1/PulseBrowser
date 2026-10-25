@@ -1,5 +1,5 @@
 'use strict';
-// Interface do PulseBrowser: abas, barra de ferramentas, barra de endereço, favoritos e localizar.
+// Interface do tuff.browse: abas, barra de ferramentas, barra de endereço, favoritos e localizar.
 (() => {
   const { icon, LOGO } = window.PulseIcons;
   const $ = (s) => document.querySelector(s);
@@ -16,6 +16,7 @@
     bookmarks: { bar: [], otherCount: 0 },
     downloads: null,
     account: null,
+    extensions: { items: [] },
   };
   let active = null;
   let currentPopup = null;
@@ -36,6 +37,8 @@
   $('#find-next').innerHTML = icon('chevronDown', 16);
   $('#find-close').innerHTML = icon('x', 16);
   $('.find-icon').innerHTML = icon('search', 15);
+  $('#ext-btn').innerHTML = icon('puzzle', 18);
+  $('#engine-btn .eng-caret').innerHTML = icon('chevronDown', 12);
 
   // ---------------------------------------------------------------- Utilidades
   function rectOf(el) {
@@ -128,7 +131,13 @@
     cancelAnimationFrame(metricsRaf);
     metricsRaf = requestAnimationFrame(() => {
       const fullscreen = document.body.classList.contains('html-fullscreen');
-      window.pulse.send('ui:metrics', { height: fullscreen ? 0 : chromeEl.offsetHeight, omnibox: rectOf($('#omnibox')) });
+      const pins = {};
+      for (const b of document.querySelectorAll('#ext-pins .ext-pin')) pins[b.dataset.id] = rectOf(b);
+      window.pulse.send('ui:metrics', {
+        height: fullscreen ? 0 : chromeEl.offsetHeight,
+        omnibox: rectOf($('#omnibox')),
+        ext: { btn: rectOf($('#ext-btn')), pins },
+      });
     });
   }
   new ResizeObserver(sendMetrics).observe(chromeEl);
@@ -460,7 +469,7 @@
         siteInfo.title = 'O certificado deste site não é confiável';
       } else if (sec === 'internal') {
         ic.innerHTML = `<span class="logo">${LOGO}</span>`;
-        siteInfo.title = 'Página do PulseBrowser';
+        siteInfo.title = 'Página do tuff.browse';
       } else if (sec === 'file') {
         ic.innerHTML = icon('fileText', 15);
         label.textContent = 'Arquivo';
@@ -511,9 +520,10 @@
       if (t && lastBlocked.id === t.id && blocked > lastBlocked.n) replay(badge, 'bump');
       lastBlocked = { id: t ? t.id : null, n: blocked };
       shieldBtn.title = shieldOn
-        ? `Pulse Shield: ${blocked} anúncio(s) e rastreador(es) bloqueado(s) nesta página`
-        : 'Pulse Shield desativado para este site';
+        ? `tuff Shield: ${blocked} anúncio(s) e rastreador(es) bloqueado(s) nesta página`
+        : 'tuff Shield desativado para este site';
     }
+    renderEngine();
   }
 
   backBtn.addEventListener('click', () => window.pulse.send('ui:command', { cmd: 'back' }));
@@ -538,6 +548,8 @@
 
   // ---------------------------------------------------------------- Pop-ups (sobreposição)
   const POPUP_BUTTONS = {
+    engines: '#engine-btn',
+    extensions: '#ext-btn',
     menu: '#menu-btn',
     downloads: '#downloads-btn',
     shield: '#shield-btn',
@@ -548,9 +560,18 @@
     profile: '#profile-btn',
   };
 
+  let extPopupId = null;
   function setPopupState(type) {
     currentPopup = type;
     for (const [t, sel] of Object.entries(POPUP_BUTTONS)) $(sel).classList.toggle('open', t === type);
+    if (type !== 'ext-popup') extPopupId = null;
+    let pinOpen = false;
+    for (const b of document.querySelectorAll('#ext-pins .ext-pin')) {
+      const on = type === 'ext-popup' && b.dataset.id === extPopupId;
+      b.classList.toggle('open', on);
+      pinOpen = pinOpen || on;
+    }
+    if (type === 'ext-popup' && !pinOpen) $('#ext-btn').classList.add('open');
   }
 
   function togglePopup(type, el, extra = {}) {
@@ -569,6 +590,7 @@
     if (currentPopup === 'suggestions' && e.target.closest('#omnibox')) return;
     const sel = POPUP_BUTTONS[currentPopup];
     if (sel && e.target.closest(sel)) return;
+    if (currentPopup === 'ext-popup' && e.target.closest('.ext-pin, #ext-btn')) return;
     window.pulse.send('ui:popup-hide');
     setPopupState(null);
   }, true);
@@ -587,6 +609,76 @@
   menuBtn.addEventListener('click', () => togglePopup('menu', menuBtn, { align: 'right' }));
   pwBtn.addEventListener('click', () => togglePopup('site-passwords', pwBtn, { align: 'right' }));
   profileBtn.addEventListener('click', () => togglePopup('profile', profileBtn, { align: 'right' }));
+
+  // ---------------------------------------------------------------- Buscador (chip na barra)
+  const engineBtn = $('#engine-btn');
+  let engineKey = '';
+  engineBtn.addEventListener('mousedown', (e) => e.preventDefault()); // não tira o foco da barra
+  engineBtn.addEventListener('click', () => {
+    if (currentPopup === 'suggestions') closeSuggestions();
+    togglePopup('engines', engineBtn, { align: 'right' });
+  });
+  function renderEngine() {
+    const s = state.settings;
+    const name = s.engineName || 'Google';
+    const img = engineBtn.querySelector('.eng-ico');
+    const key = `${s.searchEngine}|${s.engineIcon}`;
+    if (key !== engineKey) {
+      const first = !engineKey;
+      engineKey = key;
+      if (s.engineIcon) img.src = s.engineIcon;
+      engineBtn.querySelector('.eng-name').textContent = name;
+      if (!first) replay(engineBtn, 'swap');
+    }
+    engineBtn.title = `Buscador: ${name} — clique para trocar`;
+    engineBtn.classList.toggle('expanded', omniFocused || !!(active && active.newTab));
+  }
+
+  // ---------------------------------------------------------------- Extensões
+  const extBtn = $('#ext-btn');
+  const extPins = $('#ext-pins');
+  extBtn.addEventListener('click', () => togglePopup('extensions', extBtn, { align: 'right' }));
+  function renderExtensions() {
+    const items = (state.extensions && state.extensions.items) || [];
+    const pinned = items.filter((x) => x.pinned && x.enabled && !x.disabled);
+    const keep = new Set(pinned.map((x) => x.id));
+    for (const b of [...extPins.children]) if (!keep.has(b.dataset.id)) b.remove();
+    pinned.forEach((x, i) => {
+      let b = extPins.querySelector(`.ext-pin[data-id="${CSS.escape(x.id)}"]`);
+      if (!b) {
+        b = document.createElement('button');
+        b.className = 'tb-btn ext-pin';
+        b.dataset.id = x.id;
+        b.innerHTML = '<img alt="" draggable="false"><span class="badge" hidden></span>';
+        b.addEventListener('click', () => {
+          if (currentPopup === 'ext-popup' && extPopupId === b.dataset.id) {
+            window.pulse.send('ui:popup-hide');
+            setPopupState(null);
+            return;
+          }
+          if (currentPopup === 'suggestions') closeSuggestions();
+          window.pulse.send('ui:ext-action', { id: b.dataset.id, anchor: rectOf(b) });
+        });
+        b.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          window.pulse.send('ui:ext-menu', { id: b.dataset.id });
+        });
+        replay(b, 'appear');
+      }
+      const img = b.querySelector('img');
+      if (img.getAttribute('src') !== x.icon) img.src = x.icon;
+      b.title = x.title || x.name;
+      const badge = b.querySelector('.badge');
+      const text = x.badge && x.badge.text ? String(x.badge.text).slice(0, 4) : '';
+      badge.hidden = !text;
+      badge.textContent = text;
+      badge.style.background = x.badge && x.badge.color ? x.badge.color : '';
+      if (extPins.children[i] !== b) extPins.insertBefore(b, extPins.children[i] || null);
+    });
+    extBtn.classList.toggle('has-ext', items.some((x) => x.enabled && !x.disabled));
+    extBtn.title = items.length ? 'Extensões' : 'Extensões — crie a sua';
+    sendMetrics();
+  }
 
   // ---------------------------------------------------------------- Perfil (conta do Google)
   let accountKey = '';
@@ -638,6 +730,7 @@
     omni.classList.add('focused');
     if (!omniDirty) input.value = active && !active.newTab ? active.url : '';
     input.select();
+    renderEngine();
   });
   input.addEventListener('blur', () => {
     omniFocused = false;
@@ -645,6 +738,7 @@
     closeSuggestions();
     if (!input.value.trim()) omniDirty = false;
     if (!omniDirty) renderToolbar();
+    renderEngine();
     input.scrollLeft = 0;
   });
   input.addEventListener('input', (e) => {
@@ -1017,6 +1111,14 @@
     dlBtn.classList.add('pulse');
   });
   window.pulse.on('ui:popup', ({ type }) => setPopupState(type));
+  window.pulse.on('ui:extensions', (d) => {
+    state.extensions = d && Array.isArray(d.items) ? d : { items: [] };
+    renderExtensions();
+  });
+  window.pulse.on('ui:ext-popup', ({ id }) => {
+    extPopupId = id;
+    setPopupState('ext-popup');
+  });
   window.pulse.on('ui:focus-omnibox', () => {
     input.focus();
     input.select();

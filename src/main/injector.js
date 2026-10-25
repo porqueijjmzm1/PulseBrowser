@@ -4,7 +4,7 @@
 //
 // O código roda pelo mesmo protocolo que o console das DevTools usa (Runtime.evaluate): funciona em sites
 // com CSP rígida, aceita "await" no topo e mostra objetos, elementos e erros como o F12.
-// Só a janela do injetor fala com estes canais; páginas de sites e páginas pulse:// não têm acesso.
+// Só a janela do injetor fala com estes canais; páginas de sites e páginas tuff:// não têm acesso.
 const path = require('path');
 const { BrowserWindow, ipcMain, nativeTheme, session } = require('electron');
 const ctx = require('./context');

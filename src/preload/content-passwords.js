@@ -1,5 +1,5 @@
 'use strict';
-// PulseBrowser - senhas nas páginas: detecta logins, oferece preenchimento automático,
+// tuff.browse - senhas nas páginas: detecta logins, oferece preenchimento automático,
 // sugere senhas fortes e avisa o navegador quando uma senha nova foi usada.
 // Roda no mundo isolado (o site não enxerga este script nem as senhas preenchidas por ele).
 const { ipcRenderer, webFrame } = require('electron');

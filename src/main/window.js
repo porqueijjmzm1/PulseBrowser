@@ -6,7 +6,7 @@ const {
   app, BrowserWindow, WebContentsView, session, nativeTheme, Menu, dialog, clipboard, screen, shell,
 } = require('electron');
 const ctx = require('./context');
-const { Tab, NEW_TAB, isInternal } = require('./tab');
+const { Tab, NEW_TAB, isInternal, isExtensionUrl } = require('./tab');
 const shortcuts = require('./shortcuts');
 const { resolveInput } = require('./omnibox');
 const permissions = require('./permissions');
@@ -21,7 +21,7 @@ const isMac = process.platform === 'darwin';
 const TITLEBAR_HEIGHT = 40;
 const ZOOM_STEPS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5];
 const PROMPT_TYPES = new Set(['permission', 'auth', 'screenshare', 'password']);
-const SINGLETON_PAGES = new Set(['settings', 'history', 'downloads', 'bookmarks', 'about', 'passwords']);
+const SINGLETON_PAGES = new Set(['settings', 'history', 'downloads', 'bookmarks', 'about', 'passwords', 'extensions']);
 const POPUP_EXIT_MS = 110;
 
 let nextWindowId = 1;
@@ -58,6 +58,7 @@ class PulseWindow {
     this.overlayReady = false;
     this.overlayQueue = [];
     this.popup = null;
+    this.extPopup = null;
     this.promptQueue = [];
     this.statusText = '';
     this.toastTimer = null;
@@ -74,7 +75,7 @@ class PulseWindow {
       minWidth: 480,
       minHeight: 320,
       show: false,
-      title: 'PulseBrowser',
+      title: 'tuff.browse',
       icon: ICON,
       backgroundColor: colors.bg,
       titleBarStyle: 'hidden',
@@ -233,7 +234,7 @@ class PulseWindow {
           buttons: ['Fechar abas', 'Cancelar'],
           defaultId: 0,
           cancelId: 1,
-          title: 'PulseBrowser',
+          title: 'tuff.browse',
           message: `Fechar ${this.tabs.length} abas?`,
           detail: this.incognito ? 'As abas anônimas serão perdidas.' : 'Você pode reabri-las ao iniciar se "Continuar de onde parou" estiver ativo.',
           checkboxLabel: 'Não perguntar novamente',
@@ -297,6 +298,7 @@ class PulseWindow {
     this.sendUI('ui:bookmarks', this.bookmarksBarData());
     this.sendUI('ui:downloads', ctx.downloads.summary());
     if (!this.incognito) this.sendUI('ui:account', ctx.accounts.publicData());
+    this.sendUI('ui:extensions', ctx.extensions.uiState(this.incognito));
     this.sendUI('ui:window-state', this.windowState());
     this._sendTabs();
     if (this.activeTab?.isNewTab) setTimeout(() => this.focusOmnibox(), 50);
@@ -314,7 +316,7 @@ class PulseWindow {
   onTabUpdated(tab) {
     if (tab === this.activeTab && !this.win.isDestroyed()) {
       const title = tab.title || (tab.isNewTab ? 'Nova aba' : tab.displayUrl);
-      this.win.setTitle(`${title} - PulseBrowser${this.incognito ? ' (Anônima)' : ''}`);
+      this.win.setTitle(`${title} - tuff.browse${this.incognito ? ' (Anônima)' : ''}`);
     }
     this.scheduleUpdate();
     if (!this.incognito) sessionstore.saveSoon();
@@ -556,7 +558,7 @@ class PulseWindow {
   openInternal(url) {
     const host = new URL(url).hostname;
     if (SINGLETON_PAGES.has(host)) {
-      const existing = this.tabs.find((t) => t.url.startsWith(`pulse://${host}`));
+      const existing = this.tabs.find((t) => t.url.startsWith(`tuff://${host}`));
       if (existing) {
         this.activateTab(existing);
         if (existing.url !== url && url.includes('#')) existing.loadURL(url);
@@ -586,7 +588,7 @@ class PulseWindow {
 
   handleWindowOpen(tab, details) {
     const { url, disposition, features } = details;
-    if (isInternal(url) && !isInternal(tab.url)) return { action: 'deny' };
+    if ((isInternal(url) || isExtensionUrl(url)) && !isInternal(tab.url) && !isExtensionUrl(tab.url)) return { action: 'deny' };
     if (/^javascript:/i.test(url)) return { action: 'deny' };
     if (disposition === 'save-to-disk') {
       tab.webContents?.downloadURL(url);
@@ -638,6 +640,7 @@ class PulseWindow {
     const changed = Math.round(m.height) !== this.uiHeight;
     this.uiHeight = Math.max(0, Math.round(m.height));
     if (m.omnibox) this.metrics.omnibox = m.omnibox;
+    if (m.ext) this.metrics.ext = m.ext;
     if (changed) this.layout();
   }
 
@@ -757,7 +760,7 @@ class PulseWindow {
     if (animate) setTimeout(finish, POPUP_EXIT_MS);
     else finish();
     this.sendUI('ui:popup', { type: null });
-    if (hadFocus && p.type !== 'suggestions') this.activeTab?.webContents?.focus();
+    if ((hadFocus && p.type !== 'suggestions') || p.type === 'ext-popup') this.activeTab?.webContents?.focus();
     setTimeout(() => this._pumpPrompts(), animate ? POPUP_EXIT_MS + 20 : 0);
   }
 
@@ -884,6 +887,19 @@ class PulseWindow {
       case 'suggestions':
         p.focus = false;
         break;
+      case 'engines': {
+        const { engineList } = require('./settings');
+        p.data = { current: ctx.settings.get('searchEngine'), engines: engineList() };
+        p.focus = true;
+        break;
+      }
+      case 'extensions':
+        p.data = { ...ctx.extensions.uiState(this.incognito), incognito: this.incognito };
+        p.focus = true;
+        break;
+      case 'ext-popup':
+        p.focus = false;
+        break;
       case 'zoom':
         p.data = { zoom: tab ? tab.serialize().zoom : 100 };
         p.focus = true;
@@ -930,7 +946,7 @@ class PulseWindow {
         buttons: ['Sair', 'Cancelar'],
         defaultId: 0,
         cancelId: 1,
-        title: 'PulseBrowser',
+        title: 'tuff.browse',
         message: 'Sair de todas as contas do Google?',
         detail: 'Você vai sair do Gmail, YouTube e dos outros serviços do Google neste navegador. As senhas salvas não são apagadas.',
       }).then(({ response }) => {
@@ -1162,6 +1178,30 @@ class PulseWindow {
         this.hidePopup();
         this.openGoogle(action.page, action.index);
         break;
+      case 'set-engine': {
+        const { ENGINES } = require('./settings');
+        if (typeof action.id !== 'string' || !Object.hasOwn(ENGINES, action.id)) break;
+        this.hidePopup();
+        if (ctx.settings.get('searchEngine') !== action.id) {
+          ctx.settings.set('searchEngine', action.id);
+          this.toast(`Buscador: ${ENGINES[action.id].name}`);
+        }
+        break;
+      }
+      case 'ext-action': {
+        const id = String(action.id || '');
+        const pins = this.metrics.ext?.pins || {};
+        const anchor = pins[id] || this.metrics.ext?.btn;
+        this.hidePopup();
+        setTimeout(() => ctx.extensions.runAction(this, id, anchor), 0);
+        break;
+      }
+      case 'ext-pin':
+        ctx.extensions.setPinned(String(action.id || ''), !!action.pinned);
+        break;
+      case 'ext-menu':
+        this.showExtensionMenu(String(action.id || ''));
+        break;
       default:
         break;
     }
@@ -1262,13 +1302,14 @@ class PulseWindow {
         case 'screenshot': await this.screenshot(); break;
         case 'bookmark-page': this.sendUI('ui:request-popup', { type: 'bookmark' }); break;
         case 'toggle-bookmarks-bar': ctx.settings.set('showBookmarksBar', !ctx.settings.get('showBookmarksBar')); break;
-        case 'history': this.openInternal('pulse://history/'); break;
-        case 'downloads': this.openInternal('pulse://downloads/'); break;
-        case 'bookmarks': this.openInternal('pulse://bookmarks/'); break;
-        case 'settings': this.openInternal(`pulse://settings/${arg ? `#${arg}` : ''}`); break;
-        case 'clear-data': this.openInternal('pulse://settings/#privacy'); break;
-        case 'about': this.openInternal('pulse://about/'); break;
-        case 'passwords': this.openInternal('pulse://passwords/'); break;
+        case 'history': this.openInternal('tuff://history/'); break;
+        case 'downloads': this.openInternal('tuff://downloads/'); break;
+        case 'bookmarks': this.openInternal('tuff://bookmarks/'); break;
+        case 'settings': this.openInternal(`tuff://settings/${arg ? `#${arg}` : ''}`); break;
+        case 'clear-data': this.openInternal('tuff://settings/#privacy'); break;
+        case 'about': this.openInternal('tuff://about/'); break;
+        case 'passwords': this.openInternal('tuff://passwords/'); break;
+        case 'extensions': this.openInternal(`tuff://extensions/${arg ? `#${arg}` : ''}`); break;
         case 'google': this.openGoogle(arg?.page || arg, arg?.index); break;
         case 'fullscreen':
           if (this.htmlFullscreenTab) this.htmlFullscreenTab.webContents?.executeJavaScript('document.exitFullscreen()', true).catch(() => {});
@@ -1364,6 +1405,45 @@ class PulseWindow {
     return nodes.map((n) => (n.type === 'folder'
       ? { label: truncate(n.title, 60), submenu: this._bookmarkMenuItems(n.children) }
       : { label: truncate(n.title || n.url, 60), click: () => this.navigate({ url: n.url }) }));
+  }
+
+  showExtensionMenu(id) {
+    const exts = ctx.extensions;
+    const ext = exts.byId.get(id);
+    if (!ext) return;
+    const st = exts.stateOf(id);
+    const items = [
+      { label: ext.name, enabled: false },
+      { type: 'separator' },
+    ];
+    if (ext.popup || ext.run) items.push({ label: ext.popup ? 'Abrir' : 'Executar nesta página', enabled: st.enabled, click: () => exts.runAction(this, id, (this.metrics.ext?.pins || {})[id] || this.metrics.ext?.btn) });
+    if (ext.options) items.push({ label: 'Opções', enabled: st.enabled, click: () => exts.openOptions(this, ext) });
+    items.push(
+      { label: st.pinned ? 'Desafixar da barra' : 'Fixar na barra', click: () => exts.setPinned(id, !st.pinned) },
+      { label: st.enabled ? 'Desativar' : 'Ativar', click: () => exts.setEnabled(id, !st.enabled) },
+      { type: 'separator' },
+      { label: ext.builtin ? 'Ver código' : 'Editar código', click: () => this.command('extensions', `edit/${id}`) },
+      { label: 'Gerenciar extensões', click: () => this.command('extensions') },
+    );
+    if (!ext.builtin) {
+      items.push({
+        label: 'Remover...',
+        click: () => {
+          dialog.showMessageBox(this.win, {
+            type: 'question',
+            buttons: ['Remover', 'Cancelar'],
+            defaultId: 1,
+            cancelId: 1,
+            title: 'tuff.browse',
+            message: `Remover a extensão "${ext.name}"?`,
+            detail: 'A pasta da extensão vai para a Lixeira.',
+          }).then(({ response }) => {
+            if (response === 0) exts.remove(id).catch((err) => this.toast(err.message));
+          });
+        },
+      });
+    }
+    Menu.buildFromTemplate(items).popup({ window: this.win });
   }
 
   showBookmarkFolderMenu(folderId, rect, ids) {

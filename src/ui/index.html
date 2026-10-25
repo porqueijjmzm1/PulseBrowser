@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src * data: blob:;">
-  <title>PulseBrowser</title>
+  <title>tuff.browse</title>
   <link rel="stylesheet" href="ui.css">
 </head>
 <body>
@@ -30,16 +30,19 @@
         <button id="zoom-badge" class="omni-btn" hidden title="Zoom"></button>
         <button id="pw-btn" class="omni-btn" hidden title="Senhas salvas para este site"></button>
         <button id="star-btn" class="omni-btn" title="Adicionar aos favoritos (Ctrl+D)"></button>
+        <button id="engine-btn" class="omni-btn" title="Buscador"><img class="eng-ico" alt="" draggable="false"><span class="eng-name"></span><span class="eng-caret"></span></button>
       </div>
 
-      <button id="shield-btn" class="tb-btn" title="Pulse Shield"><span class="badge" hidden></span></button>
+      <button id="shield-btn" class="tb-btn" title="tuff Shield"><span class="badge" hidden></span></button>
+      <div id="ext-pins"></div>
+      <button id="ext-btn" class="tb-btn" title="Extensões"></button>
       <button id="downloads-btn" class="tb-btn" hidden title="Downloads (Ctrl+J)">
         <svg class="ring" viewBox="0 0 36 36" aria-hidden="true"><circle class="ring-track" cx="18" cy="18" r="15"/><circle class="ring-bar" cx="18" cy="18" r="15"/></svg>
         <span class="dl-icon"></span>
       </button>
       <div class="tb-sep"></div>
       <button id="profile-btn" class="tb-btn" title="Perfil e contas do Google"><span class="pb-ring"></span><span class="pb-face"></span></button>
-      <button id="menu-btn" class="tb-btn" title="Personalizar e controlar o PulseBrowser"></button>
+      <button id="menu-btn" class="tb-btn" title="Personalizar e controlar o tuff.browse"></button>
     </div>
     <div id="progress"><i></i></div>
 

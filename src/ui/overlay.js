@@ -37,12 +37,25 @@
   const WIDTHS = {
     suggestions: null, menu: 300, downloads: 380, shield: 330, pageinfo: 350, bookmark: 340,
     permission: 380, auth: 380, screenshare: 660, zoom: 260, password: 370, 'site-passwords': 350, profile: 340,
+    engines: 330, extensions: 340,
   };
   const CENTERED = new Set(['auth', 'screenshare']);
 
   function position() {
     const type = current.type;
     const W = window.innerWidth;
+    if (type === 'ext-popup') {
+      // Moldura com sombra exatamente atrás da área do pop-up da extensão.
+      const b = (current.data && current.data.box) || { left: W - 330, top: 6, width: 322, height: 120 };
+      popup.style.left = `${b.left}px`;
+      popup.style.top = `${b.top}px`;
+      popup.style.width = `${b.width}px`;
+      popup.style.height = `${b.height}px`;
+      popup.style.maxHeight = '';
+      popup.style.transformOrigin = 'right top';
+      return;
+    }
+    popup.style.height = '';
     const a = current.anchor || { left: 8, right: W - 8, width: 300 };
     let width = WIDTHS[type] || 320;
     if (type === 'suggestions') width = Math.max(320, a.width);
@@ -175,7 +188,7 @@
       'sep',
       { icon: 'bookmark', label: 'Mostrar barra de favoritos', cmd: 'toggle-bookmarks-bar', check: !!d.bookmarksBar, keepOpen: true },
       { icon: 'settings', label: 'Configurações', cmd: 'settings' },
-      { icon: 'info', label: 'Sobre o PulseBrowser', cmd: 'about' },
+      { icon: 'info', label: 'Sobre o tuff.browse', cmd: 'about' },
       'sep',
       { icon: 'exit', label: 'Sair', cmd: 'quit' },
     ];
@@ -265,7 +278,7 @@
     if (!d.enabled) {
       popup.innerHTML = `<div class="pad">
         <div class="sh-head"><div class="sh-logo off">${icon('shieldOff', 22)}</div>
-        <div class="sh-title"><b>Pulse Shield</b><div class="muted">A proteção está desativada</div></div></div>
+        <div class="sh-title"><b>tuff Shield</b><div class="muted">A proteção está desativada</div></div></div>
         <p class="muted" style="margin-top:12px">Ative o Shield para bloquear anúncios, rastreadores e mineradores de criptomoeda.</p>
         <div class="row-end"><button class="btn primary" id="sh-on">Ativar proteção</button></div></div>`;
       $('#sh-on').addEventListener('click', () => act({ act: 'shield-global', enabled: true }));
@@ -273,7 +286,7 @@
     }
     if (!d.host) {
       popup.innerHTML = `<div class="pad"><div class="sh-head"><div class="sh-logo">${icon('shieldCheck', 22)}</div>
-        <div class="sh-title"><b>Pulse Shield</b><div class="muted">Ativo</div></div></div>
+        <div class="sh-title"><b>tuff Shield</b><div class="muted">Ativo</div></div></div>
         <p class="muted" style="margin-top:12px">O Shield não atua em páginas internas do navegador.</p>
         <div class="sh-foot"><span>${d.total.toLocaleString('pt-BR')} bloqueados no total</span><a class="link" id="sh-settings">Configurações</a></div></div>`;
       $('#sh-settings').addEventListener('click', () => act({ act: 'command', cmd: 'settings', arg: 'shield' }));
@@ -282,7 +295,7 @@
     const on = !d.allowed;
     popup.innerHTML = `<div class="pad">
       <div class="sh-head"><div class="sh-logo ${on ? '' : 'off'}">${icon(on ? 'shieldCheck' : 'shieldOff', 22)}</div>
-        <div class="sh-title"><b>Pulse Shield</b><div class="muted" title="${esc(d.host)}">${esc(d.host)}</div></div>
+        <div class="sh-title"><b>tuff Shield</b><div class="muted" title="${esc(d.host)}">${esc(d.host)}</div></div>
         <label class="switch" title="${on ? 'Desativar para este site' : 'Ativar para este site'}"><input type="checkbox" id="sh-toggle" ${on ? 'checked' : ''}></label></div>
       ${on ? `<div class="sh-count"><span class="big">${d.blocked}</span><span>${d.blocked === 1 ? 'item bloqueado' : 'itens bloqueados'} nesta página</span></div>
       ${shieldBreakdown(d)}
@@ -304,7 +317,7 @@
       secure: ['lock', 'A conexão é segura', 'Suas informações (como senhas e números de cartão) ficam protegidas quando são enviadas para este site.'],
       insecure: ['alert', 'A conexão com este site não é segura', 'Evite digitar informações sensíveis neste site (como senhas ou cartões), pois elas podem ser interceptadas.'],
       dangerous: ['alert', 'Certificado não confiável', 'O certificado de segurança deste site tem problemas. Alguém pode estar tentando interceptar seus dados.'],
-      internal: ['pulse', 'Página segura do PulseBrowser', 'Esta é uma página interna do navegador.'],
+      internal: ['pulse', 'Página segura do tuff.browse', 'Esta é uma página interna do navegador.'],
       file: ['fileText', 'Arquivo local', 'Este arquivo está salvo no seu computador.'],
       extension: ['puzzle', 'Página de extensão', 'Esta página pertence a uma extensão instalada.'],
       error: ['info', 'Não foi possível carregar a página', 'Verifique o endereço e sua conexão.'],
@@ -510,7 +523,7 @@
         <div class="pf-hero">
           <div class="pf-ring guest"><span class="avatar big guest">${icon('user', 30)}</span></div>
           <div class="pf-name">Você não está conectado</div>
-          <p class="muted small pf-text">Entre com sua Conta do Google para usar Gmail, YouTube, Drive e outros serviços. Suas senhas ficam salvas no PulseBrowser.</p>
+          <p class="muted small pf-text">Entre com sua Conta do Google para usar Gmail, YouTube, Drive e outros serviços. Suas senhas ficam salvas no tuff.browse.</p>
           <button class="btn primary pf-cta" data-g="signin">Fazer login com o Google</button>
         </div>
         <div class="pf-menu">${footer}</div></div>`;
@@ -540,7 +553,74 @@
     }));
   }
 
+  // ---------------------------------------------------------------- Buscadores
+  function renderEngines(d) {
+    const rows = (d.engines || []).map((e) => `<button class="en-row${e.id === d.current ? ' sel' : ''}" data-id="${esc(e.id)}">
+        <img class="en-ico" src="${esc(e.icon)}" alt="">
+        <span class="en-txt"><b>${esc(e.name)}${e.ai ? '<span class="en-tag">IA</span>' : ''}</b><span>${esc(e.desc || '')}</span></span>
+        <span class="en-chk">${e.id === d.current ? icon('check', 16) : ''}</span></button>`).join('');
+    popup.innerHTML = `<div class="en-head">${icon('search', 16)}<div><b>Buscador</b><div class="muted small">Usado na barra de endereço e na nova aba</div></div></div>
+      <div class="en-list stagger">${rows}</div>
+      <div class="dl-foot"><button class="mi" id="en-settings">${icon('settings', 16)}<span class="lbl">Configurações de pesquisa</span></button></div>`;
+    stagger();
+    popup.querySelectorAll('.en-row').forEach((b) => b.addEventListener('click', () => act({ act: 'set-engine', id: b.dataset.id })));
+    $('#en-settings').addEventListener('click', () => act({ act: 'command', cmd: 'settings', arg: 'search' }));
+    setTimeout(() => popup.querySelector('.en-row.sel')?.focus({ preventScroll: true }), 10);
+  }
+
+  // ---------------------------------------------------------------- Extensões (botão de quebra-cabeça)
+  function renderExtensions(d) {
+    const items = d.items || [];
+    const rows = items.map((x) => {
+      const off = !x.enabled;
+      const sub = x.disabled ? 'Desativada' : !x.enabled ? 'Não permitida no modo anônimo' : x.error ? 'Com erro' : x.hasPopup ? 'Abre um pop-up' : x.hasAction ? 'Executa na página' : x.newtab ? 'Nova aba personalizada' : x.scripts ? 'Roda nos sites' : '';
+      return `<div class="ex-row${off ? ' off' : ''}" data-id="${esc(x.id)}" title="${esc(x.title || x.name)}">
+        <img class="ex-ico" src="${esc(x.icon)}" alt="">
+        <span class="ex-txt"><b>${esc(x.name)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</span>
+        <button class="icon-btn ex-pin${x.pinned ? ' on' : ''}" data-a="pin" title="${x.pinned ? 'Desafixar da barra' : 'Fixar na barra'}">${icon('pin', 15)}</button>
+        <button class="icon-btn" data-a="menu" title="Mais opções">${icon('more', 15)}</button></div>`;
+    }).join('');
+    popup.innerHTML = `<div class="en-head">${icon('puzzle', 16)}<div><b>Extensões</b><div class="muted small">${items.length ? 'Fixe as que você mais usa na barra' : 'Crie extensões com JavaScript e CSS'}</div></div></div>
+      <div class="ex-list stagger">${rows || `<div class="empty">${icon('puzzle', 28)}<div>Nenhuma extensão ainda</div></div>`}</div>
+      <div class="dl-foot">
+        <button class="mi" data-cmd="extensions" data-arg="new">${icon('plus', 16)}<span class="lbl">Criar extensão</span></button>
+        <button class="mi" data-cmd="extensions">${icon('settings', 16)}<span class="lbl">Gerenciar extensões</span></button>
+      </div>`;
+    stagger();
+    popup.querySelectorAll('.ex-row').forEach((row) => {
+      const id = row.dataset.id;
+      const x = items.find((i) => i.id === id) || {};
+      row.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-a]');
+        if (btn && btn.dataset.a === 'pin') {
+          act({ act: 'ext-pin', id, pinned: !x.pinned });
+          return;
+        }
+        if (btn && btn.dataset.a === 'menu') {
+          act({ act: 'ext-menu', id });
+          return;
+        }
+        if (!x.enabled) act({ act: 'command', cmd: 'extensions', arg: id });
+        else act({ act: 'ext-action', id });
+      });
+      row.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        act({ act: 'ext-menu', id });
+      });
+    });
+    popup.querySelectorAll('[data-cmd]').forEach((b) => b.addEventListener('click', () => act({ act: 'command', cmd: b.dataset.cmd, arg: b.dataset.arg })));
+  }
+
+  // Pop-up da extensão: a página da extensão fica numa área própria por cima; aqui só a moldura.
+  function renderExtPopup(d) {
+    popup.classList.toggle('ready', !!d.ready);
+    if (!popup.querySelector('.xp-load')) popup.innerHTML = '<div class="xp-load"><i></i><i></i><i></i></div>';
+  }
+
   const RENDER = {
+    engines: renderEngines,
+    extensions: renderExtensions,
+    'ext-popup': renderExtPopup,
     password: renderPassword,
     'site-passwords': renderSitePasswords,
     profile: renderProfile,

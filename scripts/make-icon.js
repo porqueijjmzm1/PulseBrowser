@@ -1,5 +1,5 @@
 'use strict';
-// Gera os ícones do PulseBrowser (PNG + ICO) renderizando o SVG do logo com o Chromium.
+// Gera os ícones do tuff.browse (PNG + ICO) renderizando o SVG do logo com o Chromium.
 // Uso: npm run icon
 const fs = require('fs');
 const path = require('path');
@@ -20,8 +20,11 @@ function logoSvg(stroke) {
   </defs>
   <circle cx="256" cy="256" r="244" fill="url(#g)"/>
   <circle cx="256" cy="256" r="244" fill="url(#h)"/>
-  <polyline points="92,268 174,268 210,178 260,358 300,210 328,268 420,268" fill="none" stroke="#ffffff"
-    stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round"/>
+  <g fill="none" stroke="#ffffff" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M205 122V300Q205 368 262 368"/>
+    <path d="M141 204H295"/>
+  </g>
+  <circle cx="356" cy="368" r="${Math.round(stroke * 0.62)}" fill="#ffffff"/>
 </svg>`;
 }
 
@@ -51,7 +54,7 @@ app.whenReady().then(async () => {
   const win = new BrowserWindow({ show: false });
   await win.loadURL('data:text/html,<html><body></body></html>');
   const sizes = [16, 20, 24, 32, 40, 48, 64, 128, 256, 512];
-  const jobs = sizes.map((s) => ({ s, svg: logoSvg(s <= 24 ? 60 : s <= 48 ? 48 : 38) }));
+  const jobs = sizes.map((s) => ({ s, svg: logoSvg(s <= 24 ? 78 : s <= 48 ? 68 : 58) }));
   const pngs = await win.webContents.executeJavaScript(`(async () => {
     const out = {};
     for (const { s, svg } of ${JSON.stringify(jobs)}) {
@@ -75,7 +78,7 @@ app.whenReady().then(async () => {
   fs.mkdirSync(assetsDir, { recursive: true });
   fs.writeFileSync(path.join(buildDir, 'icon.png'), buf(512));
   fs.writeFileSync(path.join(assetsDir, 'icon.png'), buf(256));
-  fs.writeFileSync(path.join(assetsDir, 'icon.svg'), logoSvg(38));
+  fs.writeFileSync(path.join(assetsDir, 'icon.svg'), logoSvg(58));
   const ico = makeIco([16, 20, 24, 32, 40, 48, 64, 128, 256].map((size) => ({ size, data: buf(size) })));
   fs.writeFileSync(path.join(buildDir, 'icon.ico'), ico);
   fs.writeFileSync(path.join(assetsDir, 'icon.ico'), ico);

@@ -1,5 +1,5 @@
 'use strict';
-// Lista interna do Pulse Shield, separada por categoria. Funciona mesmo sem as listas de filtros baixadas.
+// Lista interna do tuff Shield, separada por categoria. Funciona mesmo sem as listas de filtros baixadas.
 //
 // Formato de cada item:
 //   "dominio.com"        bloqueia o domínio e todos os subdomínios (ex.: "stats.g.doubleclick.net")

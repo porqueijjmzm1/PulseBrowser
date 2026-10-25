@@ -66,7 +66,7 @@
   $('#retry').addEventListener('click', () => {
     if (isCert) {
       if (history.length > 1) history.back();
-      else location.href = 'pulse://newtab/';
+      else location.href = 'tuff://newtab/';
       return;
     }
     if (url) location.href = url;
@@ -75,7 +75,7 @@
 
   if (code === '-106' || code === '-105' && !navigator.onLine) startGame();
 
-  // ---------------------------------------------------------------- Pulse Runner (jogo offline)
+  // ---------------------------------------------------------------- tuff Runner (jogo offline)
   function startGame() {
     const canvas = $('#game');
     canvas.hidden = false;

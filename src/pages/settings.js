@@ -36,7 +36,7 @@
     const urls = e.target.value.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).slice(0, 20);
     set('startupUrls', urls);
   });
-  $('#homepage').addEventListener('change', (e) => set('homepage', e.target.value.trim() || 'pulse://newtab'));
+  $('#homepage').addEventListener('change', (e) => set('homepage', e.target.value.trim() || 'tuff://newtab'));
   $('#ms-minutes').addEventListener('change', (e) => set('memorySaverMinutes', Number(e.target.value)));
 
   function fill() {
@@ -426,10 +426,10 @@
   });
 
   // ---------------------------------------------------------------- Navegador padrão / reinício
-  if (ctx.platform !== 'win32') $('#make-default').closest('.setting').querySelector('.desc').textContent = 'Registra o PulseBrowser para abrir links http e https';
+  if (ctx.platform !== 'win32') $('#make-default').closest('.setting').querySelector('.desc').textContent = 'Registra o tuff.browse para abrir links http e https';
   $('#make-default').addEventListener('click', async () => {
     const res = await window.pulse.invoke('internal:set-default-browser');
-    toast(res.ok ? 'Confirme o PulseBrowser como navegador padrão na janela que abriu' : `Não foi possível registrar: ${res.error}`);
+    toast(res.ok ? 'Confirme o tuff.browse como navegador padrão na janela que abriu' : `Não foi possível registrar: ${res.error}`);
   });
   $('#restart').addEventListener('click', () => window.pulse.invoke('internal:relaunch'));
 

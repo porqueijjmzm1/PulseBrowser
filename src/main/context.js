@@ -11,6 +11,7 @@ module.exports = {
   accounts: null,
   grammar: null,
   injector: null,
+  extensions: null,
   windows: [], // PulseWindow[]
   closedTabs: [], // pilha de abas fechadas (janelas normais)
   quitting: false,

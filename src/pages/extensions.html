@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Extensões</title>
+  <link rel="icon" href="/assets/icon.png">
+  <link rel="stylesheet" href="/common.css">
+  <link rel="stylesheet" href="/extensions.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo" data-logo></span><span>Extensões</span></div>
+    <label class="search"><span data-icon="search"></span><input id="q" type="search" placeholder="Pesquisar extensões"></label>
+    <div class="top-actions">
+      <button class="btn" id="btn-import" data-icon="folderOpen" data-size="16">Importar pasta</button>
+      <button class="btn primary" id="btn-new" data-icon="plus" data-size="16">Criar extensão</button>
+    </div>
+  </header>
+
+  <div class="layout" id="list-view">
+    <nav class="sidenav">
+      <a href="#" class="active" data-nav="list"><span data-icon="puzzle"></span>Minhas extensões</a>
+      <a href="#api" data-nav="api"><span data-icon="code"></span>API e exemplos</a>
+      <button id="nav-folder"><span data-icon="folder"></span>Abrir pasta das extensões</button>
+      <button id="nav-reload"><span data-icon="reload"></span>Recarregar todas</button>
+      <a href="tuff://settings/#extensions"><span data-icon="layers"></span>Extensões do Chrome</a>
+    </nav>
+    <main class="content">
+      <section id="sec-list">
+        <div class="hero card">
+          <div class="hero-ico" data-icon="puzzle" data-size="26"></div>
+          <div class="grow">
+            <b>Extensões do tuff.browse</b>
+            <div class="muted small">Rode o seu JavaScript e CSS em qualquer site, até na nova aba. Fixe as extensões na barra para usar com um clique, como no Chrome.</div>
+          </div>
+        </div>
+        <div id="groups"></div>
+        <div class="empty-state" id="empty" hidden><div data-icon="puzzle" data-size="48"></div><div>Nenhuma extensão encontrada</div></div>
+      </section>
+
+      <section id="sec-api" hidden>
+        <h1>API e exemplos</h1>
+        <div class="card card-pad doc">
+          <h2>Como funciona</h2>
+          <p>Cada extensão é uma pasta com um <code>manifest.json</code>. Ela pode ter <b>scripts de conteúdo</b> (rodam nos sites que você escolher), um <b>botão com pop-up</b> na barra, um <b>script de clique</b> e até <b>substituir a nova aba</b>.</p>
+          <pre class="snip"><code>{
+  "name": "Minha extensão",
+  "version": "1.0",
+  "icon": "icon.svg",
+  "content_scripts": [{
+    "matches": ["youtube.com", "*://*.google.com/*", "&lt;all_urls&gt;"],
+    "js": ["content.js"],
+    "css": ["style.css"],
+    "run_at": "document_idle",
+    "world": "MAIN"
+  }],
+  "action": { "default_popup": "popup.html", "default_title": "Minha extensão" },
+  "newtab": "newtab.html",
+  "options_page": "options.html"
+}</code></pre>
+          <h2>Campos do manifest</h2>
+          <table class="ref">
+            <tr><td><code>content_scripts[].matches</code></td><td><code>&lt;all_urls&gt;</code> (todos os sites e a nova aba), <code>youtube.com</code> (o site e subdomínios), <code>*://*.site.com/caminho/*</code>, <code>newtab</code> ou <code>*</code>.</td></tr>
+            <tr><td><code>exclude_matches</code></td><td>Endereços em que o script não deve rodar.</td></tr>
+            <tr><td><code>run_at</code></td><td><code>document_start</code> (antes da página), <code>document_end</code> (DOM pronto) ou <code>document_idle</code> (padrão).</td></tr>
+            <tr><td><code>world</code></td><td><code>MAIN</code>: roda junto com o JavaScript do site (acessa as variáveis dele). <code>ISOLATED</code> (padrão): mundo separado, com a API <code>tuff</code>.</td></tr>
+            <tr><td><code>all_frames</code></td><td><code>true</code> para rodar também dentro de iframes.</td></tr>
+            <tr><td><code>action.default_popup</code></td><td>Página HTML que abre ao clicar no botão da extensão.</td></tr>
+            <tr><td><code>action.run</code></td><td>Arquivo .js executado na aba aberta a cada clique (sem pop-up).</td></tr>
+            <tr><td><code>newtab</code></td><td>Página HTML que vira a sua nova aba.</td></tr>
+            <tr><td><code>incognito</code></td><td><code>true</code> para rodar também nas janelas anônimas.</td></tr>
+          </table>
+          <h2>API <code>tuff</code></h2>
+          <p class="muted small">Disponível no pop-up, na nova aba, nas opções e em scripts <code>ISOLATED</code> (os marcados com • só nas páginas da extensão).</p>
+          <table class="ref">
+            <tr><td><code>await tuff.storage.get(chave)</code></td><td>Lê um valor salvo (sem chave: tudo). Também <code>set(chave, valor)</code>, <code>remove</code>, <code>clear</code> e <code>onChanged(fn)</code>.</td></tr>
+            <tr><td><code>tuff.notify(texto)</code></td><td>Mostra um aviso rápido no navegador.</td></tr>
+            <tr><td><code>await tuff.fetch(url, opções)</code></td><td>Busca qualquer endereço sem bloqueio de CORS. Retorna <code>{ ok, status, headers, text }</code>. Use <code>{ as: 'dataurl' }</code> para imagens.</td></tr>
+            <tr><td><code>tuff.tabs.create({ url })</code></td><td>Abre uma aba nova.</td></tr>
+            <tr><td>• <code>await tuff.tabs.active()</code></td><td>Título e endereço da aba aberta.</td></tr>
+            <tr><td>• <code>await tuff.tabs.execute(código)</code></td><td>Roda JavaScript na aba aberta e devolve o resultado.</td></tr>
+            <tr><td>• <code>tuff.tabs.update({ url })</code></td><td>Navega a aba aberta.</td></tr>
+            <tr><td>• <code>tuff.browser.search(texto)</code></td><td>Pesquisa com o buscador escolhido (na aba atual).</td></tr>
+            <tr><td><code>await tuff.browser.engine()</code></td><td>Buscador atual. • <code>engines()</code> lista todos e <code>setEngine(id)</code> troca.</td></tr>
+            <tr><td>• <code>await tuff.browser.topSites()</code></td><td>Sites mais visitados. Também <code>bookmarks()</code> e <code>theme()</code>.</td></tr>
+            <tr><td>• <code>tuff.action.setBadge(texto, cor)</code></td><td>Mostra um número no botão da extensão.</td></tr>
+            <tr><td>• <code>tuff.popup.close()</code></td><td>Fecha o pop-up.</td></tr>
+            <tr><td><code>tuff.runtime.openOptions()</code></td><td>Abre a página de opções.</td></tr>
+            <tr><td><code>tuff.getURL(arquivo)</code></td><td>Endereço de um arquivo da extensão (<code>tuff-ext://id/arquivo</code>).</td></tr>
+          </table>
+          <h2>Exemplos rápidos</h2>
+          <pre class="snip"><code>// Esconder os Shorts do YouTube  (matches: ["youtube.com"], world: "MAIN")
+new MutationObserver(() => {
+  document.querySelectorAll('ytd-reel-shelf-renderer, [is-shorts]').forEach((el) => el.remove());
+}).observe(document.documentElement, { childList: true, subtree: true });
+
+// Modo escuro em qualquer site  (css: ["dark.css"])
+html { filter: invert(1) hue-rotate(180deg); }
+img, video, picture { filter: invert(1) hue-rotate(180deg); }</code></pre>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Editor de código -->
+  <div class="editor-view" id="editor-view" hidden>
+    <aside class="files">
+      <div class="files-head">
+        <button class="icon-btn" id="ed-back" title="Voltar para a lista"></button>
+        <img class="ed-icon" id="ed-icon" alt="">
+        <div class="grow ellipsis"><b id="ed-name"></b><div class="muted small" id="ed-id"></div></div>
+      </div>
+      <div class="file-list" id="file-list"></div>
+      <div class="files-foot">
+        <button class="btn" id="ed-newfile" data-icon="plus" data-size="15">Novo arquivo</button>
+        <button class="icon-btn" id="ed-folder" title="Abrir a pasta da extensão"></button>
+      </div>
+    </aside>
+    <section class="ed-main">
+      <div class="ed-bar">
+        <span class="ed-file" id="ed-file"></span>
+        <span class="ed-dirty" id="ed-dirty" hidden>não salvo</span>
+        <div class="grow"></div>
+        <span class="ed-ro" id="ed-ro" hidden>Somente leitura — extensão de fábrica</span>
+        <button class="btn" id="ed-dup" hidden>Duplicar para editar</button>
+        <button class="btn" id="ed-delfile" title="Apagar este arquivo">Apagar</button>
+        <button class="btn" id="ed-save" title="Salvar (Ctrl+S)">Salvar</button>
+        <button class="btn primary" id="ed-save-reload" title="Salvar e recarregar as abas onde a extensão roda (Ctrl+Shift+S)">Salvar e recarregar abas</button>
+      </div>
+      <div class="ed-errors" id="ed-errors" hidden></div>
+      <div class="editor">
+        <div class="gutter" id="gutter" aria-hidden="true"></div>
+        <div class="code">
+          <pre class="hl" id="hl" aria-hidden="true"></pre>
+          <textarea id="code" wrap="off" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Código"></textarea>
+        </div>
+        <div class="ed-preview" id="ed-preview" hidden></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Criar extensão -->
+  <div class="modal" id="modal-new" hidden>
+    <form class="dialog card" id="new-form" autocomplete="off">
+      <h2>Criar extensão</h2>
+      <label class="field"><span>Nome</span><input id="new-name" maxlength="60" placeholder="Minha extensão" required></label>
+      <div class="field"><span>Comece com</span></div>
+      <div class="tpl-grid" id="tpl-grid">
+        <button type="button" class="tpl on" data-tpl="script"><span class="tpl-ico" data-icon="code" data-size="20"></span><b>Script nos sites</b><span>JavaScript e CSS em qualquer página, até na nova aba</span></button>
+        <button type="button" class="tpl" data-tpl="popup"><span class="tpl-ico" data-icon="puzzle" data-size="20"></span><b>Botão com pop-up</b><span>Ícone na barra que abre uma janelinha</span></button>
+        <button type="button" class="tpl" data-tpl="newtab"><span class="tpl-ico" data-icon="sparkles" data-size="20"></span><b>Nova aba</b><span>Troca a página de nova aba pela sua</span></button>
+      </div>
+      <div class="row-end">
+        <button type="button" class="btn" id="new-cancel">Cancelar</button>
+        <button type="submit" class="btn primary">Criar e abrir o editor</button>
+      </div>
+    </form>
+  </div>
+
+  <script src="/shared/icons.js"></script>
+  <script src="/common.js"></script>
+  <script src="/extensions.js"></script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 'use strict';
-// Núcleo do Pulse Shield: decide o que bloquear. Não depende do Electron, então dá para testar no Node.
+// Núcleo do tuff Shield: decide o que bloquear. Não depende do Electron, então dá para testar no Node.
 //
 // Ordem de decisão para cada requisição:
 //   1. categoria desligada pelo usuário  -> permite (vale também para as listas de filtros)

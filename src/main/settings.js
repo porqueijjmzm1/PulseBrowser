@@ -2,38 +2,80 @@
 const { EventEmitter } = require('events');
 const { JsonStore } = require('./store');
 
+// Buscadores. Cada um tem uma marca simples (cor + letra) desenhada aqui mesmo, sem baixar ícones.
 const ENGINES = {
   google: {
     name: 'Google',
     search: 'https://www.google.com/search?q=%s',
     suggest: 'https://suggestqueries.google.com/complete/search?client=firefox&ie=utf-8&oe=utf-8&q=%s',
-  },
-  bing: {
-    name: 'Bing',
-    search: 'https://www.bing.com/search?q=%s',
-    suggest: 'https://api.bing.com/osjson.aspx?query=%s',
-  },
-  duckduckgo: {
-    name: 'DuckDuckGo',
-    search: 'https://duckduckgo.com/?q=%s',
-    suggest: 'https://duckduckgo.com/ac/?q=%s&type=list',
+    mark: { bg: '#ffffff', fg: '#4285f4', text: 'G', ring: '#dadce0' },
+    desc: 'Os resultados mais completos',
   },
   brave: {
     name: 'Brave Search',
     search: 'https://search.brave.com/search?q=%s',
     suggest: 'https://search.brave.com/api/suggest?q=%s',
+    mark: { bg: '#fb542b', fg: '#ffffff', text: 'B' },
+    desc: 'Índice próprio, privado, com respostas de IA',
+  },
+  duckduckgo: {
+    name: 'DuckDuckGo',
+    search: 'https://duckduckgo.com/?q=%s',
+    suggest: 'https://duckduckgo.com/ac/?q=%s&type=list',
+    mark: { bg: '#de5833', fg: '#ffffff', text: 'D' },
+    desc: 'Privado, não rastreia suas buscas',
+  },
+  bing: {
+    name: 'Bing',
+    search: 'https://www.bing.com/search?q=%s',
+    suggest: 'https://api.bing.com/osjson.aspx?query=%s',
+    mark: { bg: '#0f7c82', fg: '#ffffff', text: 'b' },
+    desc: 'Buscador da Microsoft, com Copilot',
+  },
+  perplexity: {
+    name: 'Perplexity',
+    search: 'https://www.perplexity.ai/search?q=%s',
+    suggest: null,
+    mark: { bg: '#1f6f78', fg: '#ffffff', text: '✳' },
+    desc: 'Responde com IA e mostra as fontes',
+  },
+  startpage: {
+    name: 'Startpage',
+    search: 'https://www.startpage.com/do/search?q=%s',
+    suggest: null,
+    mark: { bg: '#6573ff', fg: '#ffffff', text: 'S' },
+    desc: 'Resultados do Google, sem rastreamento',
   },
   ecosia: {
     name: 'Ecosia',
     search: 'https://www.ecosia.org/search?q=%s',
     suggest: 'https://ac.ecosia.org/autocomplete?q=%s&type=list',
+    mark: { bg: '#2e9d5b', fg: '#ffffff', text: 'e' },
+    desc: 'Planta árvores com o lucro dos anúncios',
   },
   yahoo: {
     name: 'Yahoo',
     search: 'https://search.yahoo.com/search?p=%s',
     suggest: null,
+    mark: { bg: '#6001d2', fg: '#ffffff', text: 'Y!' },
+    desc: 'Resultados do Bing com o portal Yahoo',
   },
 };
+
+// Ícone do buscador em SVG (data URL), usado na barra de endereço, nos menus e na nova aba.
+function engineIcon(id) {
+  const e = ENGINES[id] || ENGINES.google;
+  const m = e.mark;
+  const size = m.text.length > 1 ? 13 : 17;
+  const ring = m.ring ? `<circle cx="16" cy="16" r="14.5" fill="none" stroke="${m.ring}" stroke-width="1.5"/>` : '';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="15" fill="${m.bg}"/>${ring}`
+    + `<text x="16" y="16" dy=".36em" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-weight="700" font-size="${size}" fill="${m.fg}">${m.text}</text></svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+function engineList() {
+  return Object.entries(ENGINES).map(([id, e]) => ({ id, name: e.name, desc: e.desc, icon: engineIcon(id), ai: id === 'perplexity' }));
+}
 
 const ACCENTS = {
   violet: '#7c5cff',
@@ -52,7 +94,8 @@ const DEFAULTS = {
   showHomeButton: true,
   startup: 'restore', // restore | newtab | urls
   startupUrls: [],
-  homepage: 'pulse://newtab',
+  homepage: 'tuff://newtab',
+  migratedBrand: false, // pulse:// -> tuff:// nas configurações salvas
   searchEngine: 'google',
   searchSuggestions: true,
   shieldEnabled: true,
@@ -149,6 +192,18 @@ class Settings extends EventEmitter {
   constructor() {
     super();
     this.store = new JsonStore('settings', DEFAULTS);
+    this._migrate();
+  }
+
+  // Configurações salvas pelo PulseBrowser apontam para pulse://.
+  _migrate() {
+    const d = this.store.data;
+    if (d.migratedBrand) return;
+    const fix = (u) => (typeof u === 'string' && /^pulse:/i.test(u) ? `tuff:${u.slice(6)}` : u);
+    d.homepage = fix(d.homepage);
+    if (Array.isArray(d.startupUrls)) d.startupUrls = d.startupUrls.map(fix);
+    d.migratedBrand = true;
+    this.store.save();
   }
 
   get data() {
@@ -190,8 +245,9 @@ class Settings extends EventEmitter {
       ...d,
       accentColor: this.accentColor(),
       engineName: this.engine().name,
+      engineIcon: engineIcon(this.get('searchEngine')),
     };
   }
 }
 
-module.exports = { Settings, ENGINES, ACCENTS, DEFAULTS };
+module.exports = { Settings, ENGINES, ACCENTS, DEFAULTS, engineIcon, engineList };

@@ -379,7 +379,46 @@ body.platform-darwin #caption-spacer { width: 8px; }
 @keyframes star-burst { 0% { transform: scale(0.3) rotate(-60deg); } 60% { transform: scale(1.3) rotate(10deg); } 100% { transform: none; } }
 @keyframes ring-out { from { transform: scale(0.4); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
 
-#shield-btn .badge {
+/* Chip do buscador: o ícone fica sempre visível; o nome aparece com a barra em foco ou na nova aba. */
+#engine-btn {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 5px;
+  margin-left: 2px;
+  color: var(--text);
+  border: 1px solid transparent;
+  transition: background-color 0.15s, border-color 0.2s, padding 0.25s cubic-bezier(0.3, 1.3, 0.5, 1);
+}
+#engine-btn .eng-ico { width: 18px; height: 18px; border-radius: 50%; display: block; flex: none; }
+#engine-btn .eng-name {
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 12.5px;
+  font-weight: 600;
+  opacity: 0;
+  transition: max-width 0.3s cubic-bezier(0.3, 1.1, 0.5, 1), opacity 0.2s, margin 0.3s;
+}
+#engine-btn .eng-caret { display: grid; width: 0; overflow: hidden; color: var(--muted); transition: width 0.3s, margin 0.3s; }
+#engine-btn .eng-caret .ico { width: 12px; height: 12px; }
+#engine-btn.expanded, #engine-btn:hover { padding: 0 8px 0 5px; border-color: var(--border); }
+#engine-btn.expanded .eng-name, #engine-btn:hover .eng-name { max-width: 120px; opacity: 1; margin-left: 6px; }
+#engine-btn.expanded .eng-caret, #engine-btn:hover .eng-caret { width: 12px; margin-left: 3px; }
+#engine-btn.open .eng-caret .ico { transform: rotate(180deg); }
+#engine-btn.swap .eng-ico { animation: swap-in 0.4s cubic-bezier(0.2, 1.4, 0.4, 1); }
+#engine-btn:active .eng-ico { transform: scale(0.86); }
+#engine-btn .eng-ico { transition: transform 0.2s cubic-bezier(0.3, 1.5, 0.5, 1); }
+
+/* Extensões fixadas e o botão de quebra-cabeça (como no Chrome). */
+#ext-pins { display: flex; align-items: center; gap: 2px; flex: none; }
+#ext-pins:empty { display: none; }
+.ext-pin img { width: 18px; height: 18px; display: block; border-radius: 4px; transition: transform 0.22s cubic-bezier(0.3, 1.5, 0.5, 1); }
+.ext-pin:active img { transform: scale(0.84); }
+.ext-pin.appear { animation: btn-appear 0.45s cubic-bezier(0.2, 1.6, 0.4, 1); }
+#ext-btn:hover > .ico { transform: rotate(-12deg) scale(1.06); }
+
+#shield-btn .badge, .ext-pin .badge {
   position: absolute;
   right: 1px;
   bottom: 3px;
@@ -395,7 +434,7 @@ body.platform-darwin #caption-spacer { width: 8px; }
   text-align: center;
   pointer-events: none;
 }
-#shield-btn .badge[hidden] { display: none; }
+#shield-btn .badge[hidden], .ext-pin .badge[hidden] { display: none; }
 #shield-btn .badge.bump { animation: bump 0.4s cubic-bezier(0.2, 1.8, 0.4, 1); }
 @keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
 #shield-btn.on { color: var(--accent); }

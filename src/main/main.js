@@ -1,5 +1,5 @@
 'use strict';
-// PulseBrowser - processo principal.
+// tuff.browse - processo principal.
 const fs = require('fs');
 const path = require('path');
 const { app, session, nativeTheme, Menu } = require('electron');
@@ -10,10 +10,30 @@ const isMac = process.platform === 'darwin';
 const pendingUrls = [];
 
 protocol.registerSchemes();
-app.setName('PulseBrowser');
+app.setName('tuff.browse');
 // Pasta de dados separada para testes de desenvolvimento.
-if (!app.isPackaged && process.env.PULSE_USERDATA) app.setPath('userData', path.resolve(process.env.PULSE_USERDATA));
+const devUserData = !app.isPackaged && (process.env.TUFF_USERDATA || process.env.PULSE_USERDATA);
+if (devUserData) app.setPath('userData', path.resolve(devUserData));
+else migrateUserData();
+// O identificador antigo continua o mesmo: atalhos fixados na barra de tarefas seguem funcionando.
 if (process.platform === 'win32') app.setAppUserModelId('com.pulsebrowser.app');
+
+// O navegador se chamava PulseBrowser: na primeira vez com o nome novo, a pasta de dados
+// (favoritos, senhas, histórico, configurações) é renomeada para tuff.browse.
+function migrateUserData() {
+  try {
+    const appData = app.getPath('appData');
+    const target = path.join(appData, 'tuff.browse');
+    const old = path.join(appData, 'PulseBrowser');
+    if (fs.existsSync(target) || !fs.existsSync(old)) return;
+    try {
+      fs.renameSync(old, target);
+    } catch {
+      // A pasta antiga está em uso (ex.: o PulseBrowser antigo aberto): continua usando-a.
+      app.setPath('userData', old);
+    }
+  } catch { /* ignora */ }
+}
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -43,6 +63,7 @@ function bootstrap() {
     for (const s of [ctx.settings, ctx.history, ctx.bookmarks, ctx.downloads, ctx.passwords, ctx.accounts]) s?.store?.flush();
     ctx.grammar?.flush?.();
     ctx.injector?.flush();
+    ctx.extensions?.flush();
     ctx.shield?.stats?.flush();
   });
   app.on('certificate-error', (event, webContents, url, _error, _cert, callback) => {
@@ -66,7 +87,7 @@ function bootstrap() {
   });
 
   app.whenReady().then(init).catch((err) => {
-    console.error('Falha ao iniciar o PulseBrowser', err);
+    console.error('Falha ao iniciar o tuff.browse', err);
     app.quit();
   });
 }
@@ -167,6 +188,14 @@ function wireEvents() {
     for (const w of ctx.windows) w.updateTitleBarColors();
   });
 
+  ctx.extensions.on('changed', () => {
+    for (const w of ctx.windows) {
+      w.sendUI('ui:extensions', ctx.extensions.uiState(w.incognito));
+      if (w.popup?.type === 'extensions') w.updatePopup({ type: 'extensions', data: { ...ctx.extensions.uiState(w.incognito), incognito: w.incognito } });
+    }
+    ipc.broadcastInternal('internal:ext-changed');
+  });
+
   ctx.bookmarks.on('changed', () => {
     for (const w of ctx.windows) {
       w.sendUI('ui:bookmarks', w.bookmarksBarData());
@@ -216,7 +245,7 @@ function setupJumpList() {
         iconPath: process.execPath,
         iconIndex: 0,
         title: 'Nova janela',
-        description: 'Abrir uma nova janela do PulseBrowser',
+        description: 'Abrir uma nova janela do tuff.browse',
       },
       {
         program: process.execPath,
@@ -288,6 +317,7 @@ async function init() {
   const { GoogleAccounts } = require('./accounts');
   const { Grammar } = require('./grammar');
   const { Injector } = require('./injector');
+  const { Extensions } = require('./extensions');
 
   ctx.history = new History();
   ctx.bookmarks = new Bookmarks();
@@ -297,6 +327,7 @@ async function init() {
   ctx.accounts = new GoogleAccounts();
   ctx.grammar = new Grammar();
   ctx.injector = new Injector();
+  ctx.extensions = new Extensions();
 
   sessions.cleanAppUserAgent();
   nativeTheme.themeSource = ctx.settings.get('theme');
@@ -307,6 +338,7 @@ async function init() {
   require('./autofill').register();
   ctx.grammar.register();
   ctx.injector.register();
+  ctx.extensions.register();
   wireEvents();
   ctx.accounts.start();
   ctx.shield.start();
@@ -316,5 +348,6 @@ async function init() {
   await sessions.loadExtensions().catch(() => {});
   startupWindows(process.argv);
 
-  if (!app.isPackaged && process.env.PULSE_SCENARIO) require('./selftest').run(process.env.PULSE_SCENARIO);
+  const scenario = process.env.TUFF_SCENARIO || process.env.PULSE_SCENARIO;
+  if (!app.isPackaged && scenario) require('./selftest').run(scenario);
 }

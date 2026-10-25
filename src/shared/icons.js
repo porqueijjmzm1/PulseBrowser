@@ -94,11 +94,12 @@
   }
 
   const LOGO = `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <defs><linearGradient id="pulse-g" x1="0" y1="0" x2="1" y2="1">
+    <defs><linearGradient id="tuff-g" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#ff4d8d"/><stop offset="0.55" stop-color="#8b5cff"/><stop offset="1" stop-color="#3b82ff"/>
     </linearGradient></defs>
-    <circle cx="32" cy="32" r="30" fill="url(#pulse-g)"/>
-    <polyline points="12,33.5 22,33.5 26.5,22.5 32.5,44.5 37.5,26.5 41,33.5 52,33.5" fill="none" stroke="#fff" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="32" cy="32" r="30" fill="url(#tuff-g)"/>
+    <g fill="none" stroke="#fff" stroke-width="7.4" stroke-linecap="round" stroke-linejoin="round"><path d="M25.6 15.3V37.5Q25.6 46 32.8 46"/><path d="M17.6 25.5H36.9"/></g>
+    <circle cx="44.5" cy="46" r="4.6" fill="#fff"/>
   </svg>`;
 
   window.PulseIcons = { icon, LOGO, names: Object.keys(P) };

@@ -171,7 +171,7 @@ function buildPageMenu(tab, params) {
       });
     }
     items.push({ type: 'separator' });
-    if (!tab.url.startsWith('pulse:')) {
+    if (!tab.url.startsWith('tuff:')) {
       items.push({ label: 'Exibir código-fonte da página', accelerator: 'CmdOrCtrl+U', click: () => win.command('view-source') });
     }
   }

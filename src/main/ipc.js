@@ -8,7 +8,7 @@ const { promisify } = require('util');
 const { app, ipcMain, session, dialog, shell, clipboard, Menu } = require('electron');
 const ctx = require('./context');
 const { localSuggestions, remoteSuggestions, resolveInput, looksLikeUrl } = require('./omnibox');
-const { ENGINES, ACCENTS } = require('./settings');
+const { ACCENTS, engineList } = require('./settings');
 const permissions = require('./permissions');
 
 const execFileAsync = promisify(execFile);
@@ -37,13 +37,67 @@ function onUi(channel, fn) {
   });
 }
 
+// Quais páginas internas podem usar cada canal (os ausentes valem para todas).
+// Assim um script de extensão rodando na nova aba não alcança senhas, limpeza de dados etc.
+const ACCESS = {
+  'internal:set-setting': ['settings', 'newtab'],
+  'internal:top-sites': ['newtab'],
+  'internal:top-sites-remove': ['newtab'],
+  'internal:top-sites-reset': ['newtab'],
+  'internal:history-query': ['history'],
+  'internal:history-remove': ['history'],
+  'internal:history-clear': ['history', 'settings'],
+  'internal:clear-data': ['settings'],
+  'internal:choose-download-dir': ['settings'],
+  'internal:accounts': ['settings'],
+  'internal:accounts-refresh': ['settings'],
+  'internal:google': ['settings'],
+  'internal:site-permissions': ['settings'],
+  'internal:site-permission-set': ['settings'],
+  'internal:shield-stats': ['settings', 'newtab'],
+  'internal:shield-refresh': ['settings'],
+  'internal:spellcheck-languages': ['settings'],
+  'internal:set-default-browser': ['settings'],
+  'internal:relaunch': ['settings'],
+  'internal:extensions-list': ['settings', 'extensions'],
+  'internal:extension-load': ['settings', 'extensions'],
+  'internal:extension-remove': ['settings', 'extensions'],
+  'internal:cert-proceed': ['error'],
+};
+const PREFIX_ACCESS = [
+  ['internal:passwords-', ['passwords', 'settings']],
+  ['internal:bookmarks-', ['bookmarks']],
+  ['internal:download', ['downloads']],
+  ['internal:open-downloads-folder', ['downloads']],
+  ['internal:ext-', ['extensions']],
+];
+// Configurações que a nova aba pode mudar (as outras só pela página de configurações).
+const NEWTAB_SETTINGS = new Set(['newTabShortcuts', 'newTabBackground', 'hiddenTopSites', 'searchEngine']);
+
+function allowedPages(channel) {
+  if (ACCESS[channel]) return ACCESS[channel];
+  const hit = PREFIX_ACCESS.find(([prefix]) => channel.startsWith(prefix));
+  return hit ? hit[1] : null;
+}
+
+function internalPage(url) {
+  try {
+    const u = new URL(url);
+    return /^(tuff|pulse):$/.test(u.protocol) ? u.hostname : null;
+  } catch {
+    return null;
+  }
+}
+
 function internal(channel, fn) {
+  const pages = allowedPages(channel);
   ipcMain.handle(channel, async (event, ...args) => {
-    const url = event.senderFrame?.url || '';
-    if (!url.startsWith('pulse://')) throw new Error('Acesso negado');
+    const frame = event.senderFrame;
+    const page = frame && !frame.parent ? internalPage(frame.url || '') : null;
+    if (!page || (pages && !pages.includes(page))) throw new Error('Acesso negado');
     const { window, tab } = windowFromTab(event.sender);
     const incognito = event.sender.session !== session.defaultSession;
-    return fn({ event, window, tab, incognito, sender: event.sender }, ...args);
+    return fn({ event, window, tab, incognito, sender: event.sender, page }, ...args);
   });
 }
 
@@ -51,7 +105,7 @@ function broadcastInternal(channel, data) {
   for (const w of ctx.windows) {
     for (const t of w.tabs) {
       const wc = t.webContents;
-      if (wc && t.url.startsWith('pulse://')) wc.send(channel, data);
+      if (wc && internalPage(t.url)) wc.send(channel, data);
     }
   }
 }
@@ -70,34 +124,34 @@ async function registerAsDefaultBrowser() {
   const launch = process.defaultApp ? `"${exe}" "${app.getAppPath()}"` : `"${exe}"`;
   const cmd = `${launch} "%1"`;
   const icon = `"${exe}",0`;
-  const base = 'HKCU\\Software\\Clients\\StartMenuInternet\\PulseBrowser';
+  const base = 'HKCU\\Software\\Clients\\StartMenuInternet\\tuff.browse';
   const entries = [
-    [base, '', 'PulseBrowser'],
-    [`${base}\\Capabilities`, 'ApplicationName', 'PulseBrowser'],
+    [base, '', 'tuff.browse'],
+    [`${base}\\Capabilities`, 'ApplicationName', 'tuff.browse'],
     [`${base}\\Capabilities`, 'ApplicationDescription', 'Navegador rápido e privado baseado em Chromium'],
     [`${base}\\Capabilities`, 'ApplicationIcon', icon],
-    [`${base}\\Capabilities\\URLAssociations`, 'http', 'PulseBrowserURL'],
-    [`${base}\\Capabilities\\URLAssociations`, 'https', 'PulseBrowserURL'],
-    [`${base}\\Capabilities\\FileAssociations`, '.html', 'PulseBrowserHTML'],
-    [`${base}\\Capabilities\\FileAssociations`, '.htm', 'PulseBrowserHTML'],
-    [`${base}\\Capabilities\\FileAssociations`, '.pdf', 'PulseBrowserHTML'],
-    [`${base}\\Capabilities\\StartMenu`, 'StartMenuInternet', 'PulseBrowser'],
+    [`${base}\\Capabilities\\URLAssociations`, 'http', 'TuffBrowseURL'],
+    [`${base}\\Capabilities\\URLAssociations`, 'https', 'TuffBrowseURL'],
+    [`${base}\\Capabilities\\FileAssociations`, '.html', 'TuffBrowseHTML'],
+    [`${base}\\Capabilities\\FileAssociations`, '.htm', 'TuffBrowseHTML'],
+    [`${base}\\Capabilities\\FileAssociations`, '.pdf', 'TuffBrowseHTML'],
+    [`${base}\\Capabilities\\StartMenu`, 'StartMenuInternet', 'tuff.browse'],
     [`${base}\\DefaultIcon`, '', icon],
     [`${base}\\shell\\open\\command`, '', launch],
-    ['HKCU\\Software\\RegisteredApplications', 'PulseBrowser', 'Software\\Clients\\StartMenuInternet\\PulseBrowser\\Capabilities'],
-    ['HKCU\\Software\\Classes\\PulseBrowserURL', '', 'PulseBrowser URL'],
-    ['HKCU\\Software\\Classes\\PulseBrowserURL', 'URL Protocol', ''],
-    ['HKCU\\Software\\Classes\\PulseBrowserURL\\DefaultIcon', '', icon],
-    ['HKCU\\Software\\Classes\\PulseBrowserURL\\shell\\open\\command', '', cmd],
-    ['HKCU\\Software\\Classes\\PulseBrowserHTML', '', 'Documento do PulseBrowser'],
-    ['HKCU\\Software\\Classes\\PulseBrowserHTML\\DefaultIcon', '', icon],
-    ['HKCU\\Software\\Classes\\PulseBrowserHTML\\shell\\open\\command', '', cmd],
+    ['HKCU\\Software\\RegisteredApplications', 'tuff.browse', 'Software\\Clients\\StartMenuInternet\\tuff.browse\\Capabilities'],
+    ['HKCU\\Software\\Classes\\TuffBrowseURL', '', 'tuff.browse URL'],
+    ['HKCU\\Software\\Classes\\TuffBrowseURL', 'URL Protocol', ''],
+    ['HKCU\\Software\\Classes\\TuffBrowseURL\\DefaultIcon', '', icon],
+    ['HKCU\\Software\\Classes\\TuffBrowseURL\\shell\\open\\command', '', cmd],
+    ['HKCU\\Software\\Classes\\TuffBrowseHTML', '', 'Documento do tuff.browse'],
+    ['HKCU\\Software\\Classes\\TuffBrowseHTML\\DefaultIcon', '', icon],
+    ['HKCU\\Software\\Classes\\TuffBrowseHTML\\shell\\open\\command', '', cmd],
   ];
   for (const [key, name, value] of entries) {
     const args = ['add', key, ...(name ? ['/v', name] : ['/ve']), '/t', 'REG_SZ', '/d', value, '/f'];
     await execFileAsync('reg', args, { windowsHide: true });
   }
-  await shell.openExternal('ms-settings:defaultapps?registeredAppUser=PulseBrowser');
+  await shell.openExternal('ms-settings:defaultapps?registeredAppUser=tuff.browse');
   return { ok: true };
 }
 
@@ -162,6 +216,12 @@ function register() {
     Menu.buildFromTemplate(items).popup({ window: w.win });
   });
   onUi('overlay:action', (w, action) => w.handleOverlayAction(action));
+  onUi('ui:ext-action', (w, { id, anchor } = {}) => {
+    if (typeof id === 'string') ctx.extensions.runAction(w, id, anchor);
+  });
+  onUi('ui:ext-menu', (w, { id } = {}) => {
+    if (typeof id === 'string') w.showExtensionMenu(id);
+  });
 
   ipcMain.handle('ui:suggest', async (event, text) => {
     const w = windowFromUi(event.sender);
@@ -192,13 +252,14 @@ function register() {
 
   internal('internal:get-settings', () => ({
     ...ctx.settings.publicData(),
-    engines: Object.entries(ENGINES).map(([id, e]) => ({ id, name: e.name })),
+    engines: engineList(),
     accents: ACCENTS,
     downloadDirResolved: ctx.downloads.downloadDir(),
     grammarLanguages: require('./grammar').LANGUAGES,
   }));
 
-  internal('internal:set-setting', (_c, key, value) => {
+  internal('internal:set-setting', ({ page }, key, value) => {
+    if (page !== 'settings' && !NEWTAB_SETTINGS.has(key)) throw new Error('Acesso negado');
     ctx.settings.set(key, value);
     return true;
   });
@@ -257,7 +318,7 @@ function register() {
   internal('internal:bookmarks-export', async ({ window }) => {
     const res = await dialog.showSaveDialog(window?.win, {
       title: 'Exportar favoritos',
-      defaultPath: path.join(app.getPath('documents'), 'favoritos-pulsebrowser.html'),
+      defaultPath: path.join(app.getPath('documents'), 'favoritos-tuff.html'),
       filters: [{ name: 'Arquivo de favoritos', extensions: ['html'] }],
     });
     if (res.canceled || !res.filePath) return false;
@@ -307,7 +368,7 @@ function register() {
     return true;
   });
 
-  // ---- Senhas salvas (pulse://passwords)
+  // ---- Senhas salvas (tuff://passwords)
   internal('internal:passwords-list', () => ({
     logins: ctx.passwords.list(),
     never: ctx.passwords.neverList(),
@@ -374,7 +435,7 @@ function register() {
     if (response !== 0) return false;
     const res = await dialog.showSaveDialog(parent, {
       title: 'Exportar senhas',
-      defaultPath: path.join(app.getPath('documents'), 'senhas-pulsebrowser.csv'),
+      defaultPath: path.join(app.getPath('documents'), 'senhas-tuff.csv'),
       filters: [{ name: 'Arquivo CSV', extensions: ['csv'] }],
     });
     if (res.canceled || !res.filePath) return false;
@@ -424,6 +485,34 @@ function register() {
     return true;
   });
 
+  // ---- Extensões do tuff.browse (página tuff://extensions)
+  const exts = () => ctx.extensions;
+  const extId = (id) => {
+    if (typeof id !== 'string' || !exts().byId.has(id)) throw new Error('Extensão não encontrada');
+    return id;
+  };
+  internal('internal:ext-list', () => ({ items: exts().manageList(), folder: exts().userDir }));
+  internal('internal:ext-set-enabled', (_c, id, on) => exts().setEnabled(extId(id), !!on));
+  internal('internal:ext-set-pinned', (_c, id, on) => exts().setPinned(extId(id), !!on));
+  internal('internal:ext-set-incognito', (_c, id, on) => exts().setIncognito(extId(id), !!on));
+  internal('internal:ext-create', (_c, opts) => exts().create(opts && typeof opts === 'object' ? opts : {}));
+  internal('internal:ext-files', (_c, id) => exts().files(extId(id)));
+  internal('internal:ext-write', (_c, id, name, content) => exts().writeFile(extId(id), String(name || ''), content));
+  internal('internal:ext-delete-file', (_c, id, name) => exts().deleteFile(extId(id), String(name || '')));
+  internal('internal:ext-remove', (_c, id) => exts().remove(extId(id)));
+  internal('internal:ext-duplicate', (_c, id) => exts().duplicate(extId(id)));
+  internal('internal:ext-import', ({ window }) => exts().importFolder(window?.win));
+  internal('internal:ext-open-folder', (_c, id) => exts().openFolder(id ? extId(id) : null));
+  internal('internal:ext-reload', (_c, id) => {
+    if (id) return { errors: exts().reload(extId(id)).errors };
+    exts().loadAll();
+    exts()._changed();
+    return { errors: [] };
+  });
+  internal('internal:ext-reload-tabs', (_c, id) => exts().reloadTabsFor(extId(id)));
+  internal('internal:ext-run', ({ window }, id) => exts().runAction(window, extId(id), null));
+  internal('internal:ext-options', ({ window }, id) => exts().openOptions(window, exts().byId.get(extId(id))));
+
   internal('internal:shield-stats', () => ctx.shield.status());
   internal('internal:shield-refresh', async () => ctx.shield.updateLists(true));
 
@@ -454,9 +543,9 @@ function register() {
   });
 
   internal('internal:command', ({ window }, cmd, arg) => {
-    const allowed = new Set(['new-tab', 'new-window', 'new-incognito', 'settings', 'history', 'downloads', 'bookmarks', 'about', 'focus-omnibox', 'passwords']);
+    const allowed = new Set(['new-tab', 'new-window', 'new-incognito', 'settings', 'history', 'downloads', 'bookmarks', 'about', 'focus-omnibox', 'passwords', 'extensions']);
     if (window && allowed.has(cmd)) window.command(cmd, arg);
   });
 }
 
-module.exports = { register, broadcastInternal };
+module.exports = { register, broadcastInternal, internal, windowFromUi, windowFromTab };

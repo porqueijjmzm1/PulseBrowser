@@ -4,19 +4,23 @@ const { net } = require('electron');
 const ctx = require('./context');
 
 const INTERNAL_ALIASES = {
-  'chrome://settings': 'pulse://settings',
-  'chrome://history': 'pulse://history',
-  'chrome://downloads': 'pulse://downloads',
-  'chrome://bookmarks': 'pulse://bookmarks',
-  'chrome://newtab': 'pulse://newtab',
-  'about:settings': 'pulse://settings',
-  'about:history': 'pulse://history',
-  'about:downloads': 'pulse://downloads',
-  'about:newtab': 'pulse://newtab',
-  'about:pulse': 'pulse://about',
+  'chrome://settings': 'tuff://settings',
+  'chrome://history': 'tuff://history',
+  'chrome://downloads': 'tuff://downloads',
+  'chrome://bookmarks': 'tuff://bookmarks',
+  'chrome://newtab': 'tuff://newtab',
+  'about:settings': 'tuff://settings',
+  'about:history': 'tuff://history',
+  'about:downloads': 'tuff://downloads',
+  'about:newtab': 'tuff://newtab',
+  'about:pulse': 'tuff://about',
+  'about:tuff': 'tuff://about',
+  'chrome://extensions': 'tuff://extensions',
+  'about:extensions': 'tuff://extensions',
+  'about:addons': 'tuff://extensions',
 };
 
-const SCHEME_RE = /^(https?|file|pulse|view-source|about|data|chrome|chrome-extension|ftp|blob|mailto|tel):/i;
+const SCHEME_RE = /^(https?|file|tuff|tuff-ext|pulse|view-source|about|data|chrome|chrome-extension|ftp|blob|mailto|tel):/i;
 
 function looksLikeUrl(text) {
   if (/\s/.test(text)) return false;
@@ -32,6 +36,7 @@ function resolveInput(raw) {
   if (!text) return null;
   const lower = text.toLowerCase().replace(/\/$/, '');
   if (INTERNAL_ALIASES[lower]) return INTERNAL_ALIASES[lower];
+  if (/^pulse:/i.test(text)) return `tuff:${text.slice(6)}`;
   if (/^[a-zA-Z]:[\\/]/.test(text)) return `file:///${text.replace(/\\/g, '/')}`;
   if (text.startsWith('/') && process.platform !== 'win32' && !/\s/.test(text)) return `file://${text}`;
   if (looksLikeUrl(text)) {

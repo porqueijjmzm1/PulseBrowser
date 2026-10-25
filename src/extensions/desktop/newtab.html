@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Nova aba</title>
+  <link rel="stylesheet" href="newtab.css">
+</head>
+<body>
+  <!-- Papel de parede -->
+  <div id="wall" aria-hidden="true">
+    <div class="blobs"><i></i><i></i><i></i><i></i></div>
+    <div id="wall-img"></div>
+    <video id="wall-video" muted loop playsinline hidden></video>
+    <div id="wall-dim"></div>
+  </div>
+  <svg id="filters" width="0" height="0" aria-hidden="true" style="position:absolute"></svg>
+
+  <!-- Área de trabalho -->
+  <main id="desk">
+    <div id="icons"></div>
+    <div id="widgets"></div>
+    <div id="marquee" hidden></div>
+  </main>
+  <div id="credit" hidden></div>
+
+  <!-- Dock -->
+  <nav id="dock-wrap"><div id="dock" class="glass-bar"></div></nav>
+
+  <!-- Barra do modo de edição -->
+  <div id="editbar" class="glass-bar" hidden>
+    <button data-cmd="widgets"><span class="i-plus"></span>Widget</button>
+    <button data-cmd="new-icon"><span class="i-plus"></span>Atalho</button>
+    <button data-cmd="wallpaper">Papel de parede</button>
+    <button data-cmd="settings">Ajustes</button>
+    <button class="done" data-cmd="done">Concluído</button>
+  </div>
+
+  <div id="menu" class="menu" hidden></div>
+  <div id="toast" class="toast" hidden></div>
+
+  <!-- Painel lateral de ajustes -->
+  <aside id="panel" class="sheet" hidden>
+    <header>
+      <div class="tabs" id="panel-tabs">
+        <button data-tab="wallpaper" class="on">Papel de parede</button>
+        <button data-tab="widgets">Widgets</button>
+        <button data-tab="icons">Ícones</button>
+        <button data-tab="general">Geral</button>
+      </div>
+      <button class="x" id="panel-close" title="Fechar">×</button>
+    </header>
+    <div class="panel-body" id="panel-body"></div>
+  </aside>
+
+  <!-- Janela de edição (atalho, widget) -->
+  <div id="modal" class="modal" hidden><form class="dialog" id="dialog" autocomplete="off"></form></div>
+
+  <input type="file" id="file-wall" accept="image/*,video/mp4,video/webm" hidden>
+  <input type="file" id="file-icon" accept="image/*" hidden>
+  <script src="newtab.js"></script>
+</body>
+</html>

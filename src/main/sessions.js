@@ -12,14 +12,14 @@ const CONTENT_SCRIPTS = [
   { id: 'pulse-passwords', file: 'content-passwords.js' },
   { id: 'pulse-grammar', file: 'content-grammar.js' },
   { id: 'pulse-shield', file: 'content-shield.js' },
+  { id: 'tuff-extensions', file: 'content-extensions.js' },
 ];
 const certExceptions = new WeakMap(); // session -> Set(host)
 
 function cleanUserAgent(ua) {
   return ua
     .replace(/\s?Electron\/[\d.]+/i, '')
-    .replace(/\s?pulsebrowser\/[\d.]+/i, '')
-    .replace(/\s?PulseBrowser\/[\d.]+/i, '')
+    .replace(/\s?(pulsebrowser|tuff[.-]browse)\/[\d.]+/i, '')
     .replace(/\s{2,}/g, ' ')
     .trim();
 }

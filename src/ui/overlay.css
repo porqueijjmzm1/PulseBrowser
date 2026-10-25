@@ -395,3 +395,43 @@ body.no-anim *, body.no-anim *::before, body.no-anim *::after { animation: none 
 .menu.sub-in { animation: sub-in 0.22s cubic-bezier(0.2, 0.9, 0.3, 1); }
 @keyframes sub-in { from { opacity: 0; transform: translateX(14px); } }
 .mi-back .lbl { font-weight: 600; }
+
+/* ---------------------------------------------------------------- Buscadores e extensões */
+.en-head { display: flex; align-items: center; gap: 12px; padding: 14px 16px 10px; }
+.en-head > .ico { width: 34px; height: 34px; padding: 9px; border-radius: 50%; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); box-sizing: border-box; }
+.en-list, .ex-list { padding: 2px 6px 6px; max-height: 420px; overflow: auto; }
+.en-row, .ex-row {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 7px 10px; border-radius: 10px; text-align: left;
+  transition: background-color 0.12s;
+}
+.en-row:hover, .en-row:focus-visible, .ex-row:hover { background: var(--hover); outline: 0; }
+.en-row.sel { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.en-ico, .ex-ico { width: 28px; height: 28px; border-radius: 50%; flex: none; transition: transform 0.22s cubic-bezier(0.3, 1.5, 0.5, 1); }
+.ex-ico { border-radius: 7px; width: 26px; height: 26px; }
+.en-row:hover .en-ico, .ex-row:hover .ex-ico { transform: scale(1.08); }
+.en-txt, .ex-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.en-txt b, .ex-txt b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+.en-txt span, .ex-txt span { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.en-tag { font-size: 9.5px !important; font-weight: 700; color: var(--accent) !important; background: color-mix(in srgb, var(--accent) 15%, transparent); padding: 1px 5px; border-radius: 6px; }
+.en-chk { width: 18px; color: var(--accent); flex: none; }
+.en-row.sel .en-chk .ico { animation: icon-pop 0.35s cubic-bezier(0.2, 1.6, 0.4, 1); }
+.ex-row.off .ex-ico { filter: grayscale(1); opacity: 0.55; }
+.ex-row.off b { color: var(--muted); }
+.ex-row .icon-btn { width: 28px; height: 28px; }
+.ex-pin { opacity: 0.55; }
+.ex-row:hover .ex-pin { opacity: 1; }
+.ex-pin.on { color: var(--accent); opacity: 1; }
+.ex-pin.on .ico { fill: color-mix(in srgb, var(--accent) 35%, transparent); }
+.ex-list .empty { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.ex-list .empty .ico { color: var(--accent); opacity: 0.7; }
+
+/* Moldura do pop-up de extensão (a página fica numa área própria por cima). */
+#popup.popup-ext-popup { overflow: hidden; border-radius: 13px; animation: pop-in 0.22s cubic-bezier(0.2, 0.9, 0.25, 1.12); transition: width 0.18s, height 0.18s, left 0.18s; }
+#popup.popup-ext-popup.updated { animation: none; }
+.xp-load { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.xp-load i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); opacity: 0.6; animation: xp-dot 0.9s ease-in-out infinite; }
+.xp-load i:nth-child(2) { animation-delay: 0.15s; }
+.xp-load i:nth-child(3) { animation-delay: 0.3s; }
+#popup.ready .xp-load { display: none; }
+@keyframes xp-dot { 0%, 100% { transform: scale(0.6); opacity: 0.35; } 50% { transform: scale(1); opacity: 0.9; } }

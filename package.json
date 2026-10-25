@@ -1,10 +1,10 @@
 {
-  "name": "pulsebrowser",
-  "productName": "PulseBrowser",
-  "version": "1.2.0",
-  "description": "PulseBrowser - navegador rápido e privado baseado em Chromium",
+  "name": "tuff-browse",
+  "productName": "tuff.browse",
+  "version": "1.3.0",
+  "description": "tuff.browse - navegador rápido e privado baseado em Chromium, com extensões e nova aba personalizável",
   "main": "src/main/main.js",
-  "author": "PulseBrowser",
+  "author": "tuff.browse",
   "license": "MIT",
   "scripts": {
     "start": "electron .",
@@ -18,8 +18,9 @@
   },
   "build": {
     "appId": "com.pulsebrowser.app",
-    "productName": "PulseBrowser",
-    "copyright": "PulseBrowser",
+    "productName": "tuff.browse",
+    "copyright": "tuff.browse",
+    "artifactName": "tuff.browse-Setup-${version}.${ext}",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -45,7 +46,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "PulseBrowser",
+      "shortcutName": "tuff.browse",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico"
     }

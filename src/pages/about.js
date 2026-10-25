@@ -23,7 +23,7 @@
     ['sparkles', 'Animações fluidas', 'Abas, menus, pop-ups e páginas com movimentos suaves (podem ser desligados).'],
     ['layers', 'Abas completas', 'Arrastar para reordenar, fixar, silenciar, duplicar, mover para nova janela e reabrir abas fechadas.'],
     ['code', 'JavaScript Injector', 'Console próprio para rodar JavaScript em qualquer site, com scripts salvos que rodam sozinhos nos sites escolhidos.'],
-    ['shieldCheck', 'Pulse Shield', 'Bloqueia anúncios, rastreadores, telemetria e golpes com as listas do uBlock Origin (atualizadas sozinhas), esconde avisos de cookies, pula anúncios do YouTube e limpa links de rastreamento.'],
+    ['shieldCheck', 'tuff Shield', 'Bloqueia anúncios, rastreadores, telemetria e golpes com as listas do uBlock Origin (atualizadas sozinhas), esconde avisos de cookies, pula anúncios do YouTube e limpa links de rastreamento.'],
     ['incognito', 'Janela anônima', 'Sessão separada na memória, apagada ao fechar a última janela anônima.'],
     ['search', 'Barra de endereço inteligente', 'Sugestões de pesquisa, histórico, favoritos, abas abertas e autocompletar.'],
     ['bookmark', 'Favoritos', 'Barra de favoritos, pastas, gerenciador, importação do Chrome e de arquivos HTML.'],
