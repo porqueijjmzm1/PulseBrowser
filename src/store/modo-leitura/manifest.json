@@ -1,0 +1,23 @@
+{
+  "name": "Modo Leitura",
+  "version": "1.0.0",
+  "author": "tuff.browse",
+  "description": "Mostra só o texto de notícias e artigos, sem anúncios nem menus, com tema claro, sépia ou escuro e leitura em voz alta.",
+  "icon": "icon.svg",
+  "content_scripts": [
+    { "matches": ["*://*/*"], "js": ["content.js"], "run_at": "document_idle" }
+  ],
+  "action": { "default_popup": "popup.html", "default_title": "Modo Leitura (Alt+R)" },
+  "store": {
+    "category": "Produtividade",
+    "color": "#13866a",
+    "pin": true,
+    "about": "Transforma páginas cheias de anúncios, menus e pop-ups numa página limpa, só com o título, o texto e as imagens do artigo. Escolha a fonte, o tamanho da letra e o tema, ou peça para o navegador ler o texto em voz alta.",
+    "features": [
+      "Abre com Alt+R ou pelo botão na barra",
+      "Temas claro, sépia e escuro, com fonte com ou sem serifa",
+      "Mostra o tempo de leitura do artigo",
+      "Lê o texto em voz alta e destaca o parágrafo que está sendo lido"
+    ]
+  }
+}

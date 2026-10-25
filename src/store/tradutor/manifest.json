@@ -1,0 +1,23 @@
+{
+  "name": "Tradutor",
+  "version": "1.0.0",
+  "author": "tuff.browse",
+  "description": "Selecione um texto em qualquer site e veja a tradução na hora, sem sair da página. Também traduz a página inteira.",
+  "icon": "icon.svg",
+  "content_scripts": [
+    { "matches": ["*://*/*"], "js": ["content.js"], "run_at": "document_idle" }
+  ],
+  "action": { "default_popup": "popup.html", "default_title": "Tradutor" },
+  "store": {
+    "category": "Produtividade",
+    "color": "#2a7de1",
+    "pin": true,
+    "about": "Ao selecionar um trecho de texto, aparece um botão \"Traduzir\" ao lado. A tradução abre num cartão por cima da página, com o idioma detectado, e dá para copiar ou ouvir. Pelo botão na barra você traduz um texto digitado ou abre a página inteira traduzida.",
+    "features": [
+      "Traduz o texto selecionado com um clique ou com Alt+T",
+      "Detecta o idioma sozinho; escolha entre 10 idiomas de destino",
+      "Copiar e ouvir a tradução",
+      "Traduzir a página inteira pelo Google Tradutor"
+    ]
+  }
+}

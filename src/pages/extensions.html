@@ -20,6 +20,7 @@
   <div class="layout" id="list-view">
     <nav class="sidenav">
       <a href="#" class="active" data-nav="list"><span data-icon="puzzle"></span>Minhas extensões</a>
+      <a href="#store" data-nav="store"><span data-icon="download"></span>tuff Store</a>
       <a href="#api" data-nav="api"><span data-icon="code"></span>API e exemplos</a>
       <button id="nav-folder"><span data-icon="folder"></span>Abrir pasta das extensões</button>
       <button id="nav-reload"><span data-icon="reload"></span>Recarregar todas</button>
@@ -36,6 +37,20 @@
         </div>
         <div id="groups"></div>
         <div class="empty-state" id="empty" hidden><div data-icon="puzzle" data-size="48"></div><div>Nenhuma extensão encontrada</div></div>
+      </section>
+
+      <section id="sec-store" hidden>
+        <div class="store-hero card">
+          <div class="grow">
+            <div class="store-badge"><span data-icon="sparkles" data-size="13"></span>tuff Store</div>
+            <h1>Extensões prontas para instalar</h1>
+            <p class="muted">Feitas para o tuff.browse. Instale com um clique e elas já funcionam nas páginas que você abrir. Depois, dá para editar o código como qualquer extensão sua.</p>
+          </div>
+          <div class="store-art" id="store-art" aria-hidden="true"></div>
+        </div>
+        <div class="store-cats" id="store-cats"></div>
+        <div class="grid" id="store-grid"><div class="card card-pad muted">Carregando a loja…</div></div>
+        <div class="store-note muted small" id="store-note"></div>
       </section>
 
       <section id="sec-api" hidden>
@@ -83,7 +98,7 @@
             <tr><td>• <code>tuff.browser.search(texto)</code></td><td>Pesquisa com o buscador escolhido (na aba atual).</td></tr>
             <tr><td><code>await tuff.browser.engine()</code></td><td>Buscador atual. • <code>engines()</code> lista todos e <code>setEngine(id)</code> troca.</td></tr>
             <tr><td>• <code>await tuff.browser.topSites()</code></td><td>Sites mais visitados. Também <code>bookmarks()</code> e <code>theme()</code>.</td></tr>
-            <tr><td>• <code>tuff.action.setBadge(texto, cor)</code></td><td>Mostra um número no botão da extensão.</td></tr>
+            <tr><td><code>tuff.action.setBadge(texto, cor)</code></td><td>Mostra um número no botão da extensão.</td></tr>
             <tr><td>• <code>tuff.popup.close()</code></td><td>Fecha o pop-up.</td></tr>
             <tr><td><code>tuff.runtime.openOptions()</code></td><td>Abre a página de opções.</td></tr>
             <tr><td><code>tuff.getURL(arquivo)</code></td><td>Endereço de um arquivo da extensão (<code>tuff-ext://id/arquivo</code>).</td></tr>
@@ -137,6 +152,11 @@ img, video, picture { filter: invert(1) hue-rotate(180deg); }</code></pre>
         <div class="ed-preview" id="ed-preview" hidden></div>
       </div>
     </section>
+  </div>
+
+  <!-- Detalhes de uma extensão da tuff Store -->
+  <div class="modal" id="modal-store" hidden>
+    <div class="dialog card store-dialog" id="store-dialog" role="dialog" aria-modal="true"></div>
   </div>
 
   <!-- Criar extensão -->

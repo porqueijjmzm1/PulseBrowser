@@ -18,6 +18,9 @@ const INTERNAL_ALIASES = {
   'chrome://extensions': 'tuff://extensions',
   'about:extensions': 'tuff://extensions',
   'about:addons': 'tuff://extensions',
+  'tuff://store': 'tuff://extensions/#store',
+  'pulse://store': 'tuff://extensions/#store',
+  'about:store': 'tuff://extensions/#store',
 };
 
 const SCHEME_RE = /^(https?|file|tuff|tuff-ext|pulse|view-source|about|data|chrome|chrome-extension|ftp|blob|mailto|tel):/i;

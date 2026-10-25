@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <img src="icon.svg" alt="">
+    <div><b>Modo Escuro</b><span>Qualquer site no escuro</span></div>
+  </header>
+
+  <div class="site">
+    <div class="grow"><b id="host">…</b><span id="state">Carregando…</span></div>
+    <label class="toggle" title="Escurecer este site"><input type="checkbox" id="site"></label>
+  </div>
+
+  <div class="row">
+    <div class="grow">Escurecer todos os sites</div>
+    <label class="toggle"><input type="checkbox" id="all"></label>
+  </div>
+  <div class="row">
+    <div class="grow">Pular sites que já são escuros<div class="hint">Vale para o modo "todos os sites"</div></div>
+    <label class="toggle"><input type="checkbox" id="smart"></label>
+  </div>
+
+  <div class="sec">Ajustes</div>
+  <label class="slider">Brilho<input type="range" id="brightness" min="50" max="150" step="5"><output></output></label>
+  <label class="slider">Contraste<input type="range" id="contrast" min="50" max="150" step="5"><output></output></label>
+  <label class="slider">Sépia<input type="range" id="sepia" min="0" max="100" step="5"><output></output></label>
+
+  <div class="foot">
+    <button class="link" id="reset">Restaurar ajustes</button>
+    <button class="link" id="forget" hidden>Esquecer este site</button>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

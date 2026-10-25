@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <img src="icon.svg" alt="">
+    <div><b>Velocidade de Vídeo</b><span>Vale para todos os vídeos</span></div>
+  </header>
+
+  <div class="big">
+    <button class="round" id="minus" title="Mais devagar (S)">−</button>
+    <output id="speed">1×</output>
+    <button class="round" id="plus" title="Mais rápido (D)">+</button>
+  </div>
+  <div class="presets" id="presets"></div>
+
+  <div class="sec">Atalhos nos vídeos</div>
+  <div class="keys">
+    <span><kbd>S</kbd><kbd>D</kbd></span><span>Velocidade</span>
+    <span><kbd>R</kbd></span><span>Voltar a 1×</span>
+    <span><kbd>G</kbd></span><span>1× ou 2×</span>
+    <span><kbd>Z</kbd><kbd>X</kbd></span><span id="skip-label">Pular 10 s</span>
+  </div>
+
+  <div class="sec">Ajustes</div>
+  <div class="row"><div class="grow">Passo dos atalhos</div><span class="seg" id="step"><button data-v="0.1">0,1</button><button data-v="0.25">0,25</button><button data-v="0.5">0,5</button></span></div>
+  <div class="row"><div class="grow">Pulo do Z e do X</div><span class="seg" id="skip"><button data-v="5">5 s</button><button data-v="10">10 s</button><button data-v="30">30 s</button></span></div>
+  <div class="row"><div class="grow">Mostrar a velocidade no vídeo</div><label class="toggle"><input type="checkbox" id="overlay"></label></div>
+  <div class="row"><div class="grow">Atalhos de teclado</div><label class="toggle"><input type="checkbox" id="keys"></label></div>
+  <script src="popup.js"></script>
+</body>
+</html>

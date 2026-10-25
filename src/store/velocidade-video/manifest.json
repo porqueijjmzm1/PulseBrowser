@@ -1,0 +1,23 @@
+{
+  "name": "Velocidade de Vídeo",
+  "version": "1.0.0",
+  "author": "tuff.browse",
+  "description": "Acelere ou desacelere qualquer vídeo (YouTube, cursos, redes sociais) com atalhos de teclado e veja a velocidade por cima do vídeo.",
+  "icon": "icon.svg",
+  "content_scripts": [
+    { "matches": ["*://*/*"], "js": ["content.js"], "run_at": "document_end", "all_frames": true }
+  ],
+  "action": { "default_popup": "popup.html", "default_title": "Velocidade de Vídeo" },
+  "store": {
+    "category": "Vídeo",
+    "color": "#ff5a5f",
+    "pin": true,
+    "about": "Assista aulas, podcasts e vídeos longos no seu ritmo. Funciona em qualquer site com vídeo, inclusive nos players dentro de outras páginas, e a velocidade escolhida continua valendo quando você troca de vídeo.",
+    "features": [
+      "De 0,1× até 16×, com botões rápidos de 0,5× a 3×",
+      "Atalhos: S e D mudam a velocidade, R volta para 1×, Z e X pulam alguns segundos",
+      "Mostra a velocidade por cima do vídeo, até em tela cheia",
+      "Número no botão da barra quando a velocidade não é 1×"
+    ]
+  }
+}

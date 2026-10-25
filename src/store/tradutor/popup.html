@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+  <style>
+    body { width: 320px; }
+    .langs { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: var(--muted); font-size: 12px; }
+    select { flex: 1; height: 32px; padding: 0 8px; border: 0; border-radius: 10px; background: var(--field); color: var(--text); font: 600 13px "Segoe UI", system-ui, sans-serif; outline: none; }
+    select option { color: #1d1c22; }
+    textarea { width: 100%; height: 86px; padding: 10px 12px; border: 0; border-radius: 12px; background: var(--field); color: var(--text); font: 14px/1.45 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; resize: none; outline: none; user-select: text; }
+    textarea:focus { box-shadow: inset 0 0 0 1.5px var(--accent); }
+    .out { min-height: 60px; max-height: 180px; overflow: auto; margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--accent) 10%, transparent); white-space: pre-wrap; user-select: text; font-size: 14px; }
+    .out.empty { color: var(--muted); }
+    .from { font-size: 11.5px; color: var(--muted); margin-top: 4px; min-height: 16px; }
+    .actions { display: flex; gap: 6px; margin-top: 10px; }
+    .actions button { flex: 1; height: 34px; border: 0; border-radius: 10px; background: var(--field); font-weight: 600; }
+    .actions button.main { background: var(--accent); color: #fff; }
+    .actions button:hover { filter: brightness(1.05); }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="icon.svg" alt="">
+    <div><b>Tradutor</b><span>Selecione um texto em qualquer site</span></div>
+  </header>
+
+  <div class="langs">Traduzir para <select id="target"></select></div>
+  <textarea id="text" placeholder="Digite ou cole um texto para traduzir" spellcheck="false"></textarea>
+  <div class="out empty" id="out">A tradução aparece aqui</div>
+  <div class="from" id="from"></div>
+  <div class="actions">
+    <button class="main" id="page">Traduzir esta página</button>
+    <button id="copy">Copiar</button>
+  </div>
+
+  <div class="sec">Ajustes</div>
+  <div class="row"><div class="grow">Botão "Traduzir" ao selecionar<div class="hint">Ou selecione e aperte Alt+T</div></div><label class="toggle"><input type="checkbox" id="button"></label></div>
+  <script src="popup.js"></script>
+</body>
+</html>

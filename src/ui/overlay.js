@@ -583,6 +583,7 @@
     popup.innerHTML = `<div class="en-head">${icon('puzzle', 16)}<div><b>Extensões</b><div class="muted small">${items.length ? 'Fixe as que você mais usa na barra' : 'Crie extensões com JavaScript e CSS'}</div></div></div>
       <div class="ex-list stagger">${rows || `<div class="empty">${icon('puzzle', 28)}<div>Nenhuma extensão ainda</div></div>`}</div>
       <div class="dl-foot">
+        <button class="mi" data-cmd="extensions" data-arg="store">${icon('download', 16)}<span class="lbl">tuff Store</span></button>
         <button class="mi" data-cmd="extensions" data-arg="new">${icon('plus', 16)}<span class="lbl">Criar extensão</span></button>
         <button class="mi" data-cmd="extensions">${icon('settings', 16)}<span class="lbl">Gerenciar extensões</span></button>
       </div>`;

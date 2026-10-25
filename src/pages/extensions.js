@@ -24,6 +24,7 @@
   function chips(x) {
     const out = [];
     if (x.builtin) out.push('<span class="chip builtin">De fábrica</span>');
+    if (x.store) out.push(`<span class="chip store">${icon('download', 12)}tuff Store</span>`);
     if (x.newtab) out.push(`<span class="chip ${x.newtabActive ? 'accent' : ''}">${icon('sparkles', 12)}${x.newtabActive ? 'Nova aba ativa' : 'Nova aba'}</span>`);
     if (x.popup) out.push(`<span class="chip">${icon('puzzle', 12)}Pop-up</span>`);
     if (x.run) out.push(`<span class="chip">${icon('play', 12)}Script de clique</span>`);
@@ -181,7 +182,7 @@
   });
   window.addEventListener('blur', closeMenu);
 
-  q.addEventListener('input', debounce(renderList, 80));
+  q.addEventListener('input', debounce(() => (view === 'store' ? renderStore() : renderList()), 80));
   $('#btn-new').addEventListener('click', () => {
     location.hash = 'new';
   });
@@ -519,22 +520,182 @@
     if (ed.id && dirtyFiles().length) e.preventDefault();
   });
 
-  // ---------------------------------------------------------------- Navegação (#new, #api, #edit/id, #id)
+  // ---------------------------------------------------------------- tuff Store
+  let view = 'list';
+  let store = { items: [], online: false, loaded: false };
+  let storeCat = 'Todas';
+  const busy = new Set();
+  const fmtSize = (n) => (n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1).replace('.', ',')} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+
+  async function loadStore(refresh = false) {
+    try {
+      store = { ...(await api('ext-store-list', { refresh })), loaded: true };
+    } catch (err) {
+      store = { items: [], online: false, loaded: true, error: cleanError(err) };
+    }
+    renderStore();
+  }
+
+  function storeButton(x) {
+    if (busy.has(x.id)) return '<button class="btn primary" disabled>Instalando…</button>';
+    if (x.conflict) return '<button class="btn" disabled title="Você já tem uma extensão com este identificador">Já existe</button>';
+    if (x.update) return '<button class="btn primary" data-s="install">Atualizar</button>';
+    if (x.installed) return `<button class="btn installed" data-s="manage">${icon('check', 15)}Instalada</button>`;
+    return '<button class="btn primary" data-s="install">Instalar</button>';
+  }
+
+  function renderStore() {
+    const text = q.value.trim().toLowerCase();
+    const cats = ['Todas', ...new Set(store.items.map((x) => x.category))];
+    $('#store-cats').innerHTML = store.items.length ? cats.map((c) => `<button class="${c === storeCat ? 'on' : ''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('') : '';
+    const list = store.items.filter((x) => (storeCat === 'Todas' || x.category === storeCat)
+      && (!text || `${x.name} ${x.description} ${x.category}`.toLowerCase().includes(text)));
+    $('#store-art').innerHTML = store.items.slice(0, 5).map((x, i) => `<img src="${esc(x.icon)}" alt="" style="--k:${i}">`).join('');
+    $('#store-grid').innerHTML = !store.loaded ? '<div class="card card-pad muted">Carregando a loja…</div>'
+      : list.length ? list.map((x, i) => `<div class="card ext sx${x.installed ? ' is-installed' : ''}" data-id="${esc(x.id)}" style="--i:${Math.min(i, 12)};${x.color ? `--c:${esc(x.color)}` : ''}">
+          <div class="ext-top">
+            <img class="ext-icon" src="${esc(x.icon)}" alt="">
+            <div class="ext-title"><b title="${esc(x.name)}">${esc(x.name)}</b><span class="muted">${esc(x.category)}${x.author ? ` • ${esc(x.author)}` : ''}</span></div>
+          </div>
+          <div class="ext-desc">${esc(x.description)}</div>
+          <div class="ext-actions">
+            <button class="btn" data-s="details">Detalhes</button>
+            ${x.update ? `<span class="chip accent">Versão ${esc(x.version)}</span>` : ''}
+            <span class="grow"></span>
+            ${storeButton(x)}
+          </div>
+        </div>`).join('')
+        : `<div class="card card-pad muted">${store.error ? esc(store.error) : 'Nenhuma extensão encontrada'}</div>`;
+    $('#store-note').textContent = store.loaded ? (store.online ? 'Catálogo atualizado pela internet.' : 'A loja online não respondeu agora: mostrando as extensões que vêm com o navegador.') : '';
+  }
+
+  async function installStore(id) {
+    const x = store.items.find((it) => it.id === id);
+    if (!x || busy.has(id)) return;
+    busy.add(id);
+    renderStore();
+    renderStoreDialog();
+    try {
+      const res = await api('ext-store-install', id);
+      toast(res.updated ? `${x.name} atualizada para a versão ${res.version}` : `${x.name} instalada! Ela já vale para as páginas que você abrir.`);
+    } catch (err) {
+      toast(cleanError(err));
+    } finally {
+      busy.delete(id);
+      await load();
+      await loadStore();
+      renderStoreDialog();
+    }
+  }
+
+  async function removeStore(id) {
+    const x = store.items.find((it) => it.id === id);
+    if (!x || !window.confirm(`Remover a extensão "${x.name}"? A pasta vai para a Lixeira.`)) return;
+    try {
+      await api('ext-remove', id);
+      toast('Extensão removida');
+    } catch (err) {
+      toast(cleanError(err));
+    }
+    await loadStore();
+    renderStoreDialog();
+  }
+
+  const storeModal = $('#modal-store');
+  let storeOpen = null;
+  function openStoreDialog(id) {
+    storeOpen = id;
+    storeModal.hidden = false;
+    renderStoreDialog();
+  }
+  function closeStoreDialog() {
+    storeOpen = null;
+    storeModal.hidden = true;
+  }
+  function renderStoreDialog() {
+    if (!storeOpen) return;
+    const x = store.items.find((it) => it.id === storeOpen);
+    if (!x) {
+      closeStoreDialog();
+      return;
+    }
+    const dlg = $('#store-dialog');
+    if (x.color) dlg.style.setProperty('--c', x.color);
+    dlg.innerHTML = `<div class="sd-head">
+        <img class="sd-icon" src="${esc(x.icon)}" alt="">
+        <div class="grow"><h2>${esc(x.name)}</h2><div class="muted small">${esc(x.category)} • ${esc(x.author || 'tuff.browse')} • versão ${esc(x.installed ? x.installedVersion : x.version)} • ${fmtSize(x.size)}</div></div>
+        <button class="icon-btn" data-s="close" title="Fechar">${icon('x', 18)}</button>
+      </div>
+      <p class="sd-about">${esc(x.about || x.description)}</p>
+      ${x.features.length ? `<ul class="sd-features">${x.features.map((f) => `<li>${icon('check', 15)}<span>${esc(f)}</span></li>`).join('')}</ul>` : ''}
+      <div class="row-end">
+        ${x.installed ? '<button class="btn danger" data-s="remove">Remover</button><span class="grow"></span><button class="btn" data-s="code">Ver o código</button><button class="btn" data-s="mine">Abrir em Minhas extensões</button>' : ''}
+        ${x.installed && !x.update ? '' : storeButton(x)}
+      </div>`;
+  }
+
+  $('#store-cats').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-cat]');
+    if (!b) return;
+    storeCat = b.dataset.cat;
+    renderStore();
+  });
+  $('#store-grid').addEventListener('click', (e) => {
+    const cardEl = e.target.closest('.sx');
+    if (!cardEl) return;
+    const b = e.target.closest('[data-s]');
+    if (b && b.disabled) return;
+    if (b?.dataset.s === 'install') installStore(cardEl.dataset.id);
+    else openStoreDialog(cardEl.dataset.id);
+  });
+  storeModal.addEventListener('mousedown', (e) => {
+    if (e.target === storeModal) closeStoreDialog();
+  });
+  $('#store-dialog').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-s]');
+    if (!b || !storeOpen) return;
+    const id = storeOpen;
+    switch (b.dataset.s) {
+      case 'close': closeStoreDialog(); break;
+      case 'install': installStore(id); break;
+      case 'remove': removeStore(id); break;
+      case 'code':
+        closeStoreDialog();
+        location.hash = `edit/${id}`;
+        break;
+      case 'mine':
+        closeStoreDialog();
+        location.hash = id;
+        break;
+      default: break;
+    }
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !storeModal.hidden) closeStoreDialog();
+  });
+
+  // ---------------------------------------------------------------- Navegação (#new, #api, #store, #edit/id, #id)
   async function route() {
     const h = decodeURIComponent(location.hash.replace(/^#/, ''));
     if (h.startsWith('edit/')) {
       modal.hidden = true;
+      closeStoreDialog();
       await openEditor(h.slice(5));
       return;
     }
     if (ed.id) closeEditor();
     const apiView = h === 'api';
-    $('#sec-list').hidden = apiView;
+    const storeView = h === 'store';
+    view = apiView ? 'api' : storeView ? 'store' : 'list';
+    $('#sec-list').hidden = view !== 'list';
     $('#sec-api').hidden = !apiView;
-    $$('[data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === (apiView ? 'api' : 'list')));
+    $('#sec-store').hidden = !storeView;
+    q.placeholder = storeView ? 'Pesquisar na tuff Store' : 'Pesquisar extensões';
+    $$('[data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === view));
+    if (storeView) loadStore();
     if (h === 'new') openNew();
     else modal.hidden = true;
-    if (h && !apiView && h !== 'new') {
+    if (h && !apiView && !storeView && h !== 'new') {
       const el = $(`.ext[data-id="${CSS.escape(h)}"]`);
       if (el) {
         el.scrollIntoView({ block: 'center' });
@@ -548,6 +709,10 @@
 
   window.pulse.on('internal:ext-changed', async () => {
     await load();
+    if (view === 'store' && !busy.size) {
+      await loadStore();
+      renderStoreDialog();
+    }
     if (ed.id) {
       const x = items.find((it) => it.id === ed.id);
       if (x) {

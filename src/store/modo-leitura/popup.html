@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+  <style>
+    .open { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 42px; border: 0; border-radius: 12px; background: var(--accent); color: #fff; font-weight: 700; font-size: 14px; transition: filter 0.15s, transform 0.2s cubic-bezier(0.3, 1.5, 0.5, 1); }
+    .open:hover { filter: brightness(1.08); }
+    .open:active { transform: scale(0.97); }
+    .open kbd { font: 600 11px "Segoe UI", system-ui, sans-serif; padding: 2px 6px; border-radius: 6px; background: rgba(255, 255, 255, 0.22); }
+    .msg { margin: 8px 0 0; color: var(--muted); font-size: 12px; text-align: center; min-height: 16px; }
+    .themes { display: flex; gap: 8px; }
+    .themes button { width: 26px; height: 26px; border: 0; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15); }
+    .themes button.on { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15), 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
+    .size { display: flex; align-items: center; gap: 6px; }
+    .size button { width: 28px; height: 28px; border: 0; border-radius: 8px; background: var(--field); font-weight: 700; }
+    .size output { min-width: 34px; text-align: center; font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="icon.svg" alt="">
+    <div><b>Modo Leitura</b><span>Só o texto, sem distrações</span></div>
+  </header>
+
+  <button class="open" id="open">Ler esta página <kbd>Alt+R</kbd></button>
+  <p class="msg" id="msg"></p>
+
+  <div class="sec">Aparência</div>
+  <div class="row"><div class="grow">Tema</div>
+    <span class="themes" id="themes"><button data-v="light" title="Claro" style="background:#fbfaf7"></button><button data-v="sepia" title="Sépia" style="background:#f4ecd8"></button><button data-v="dark" title="Escuro" style="background:#1b1a20"></button></span></div>
+  <div class="row"><div class="grow">Fonte</div><span class="seg" id="font"><button data-v="serif">Serifa</button><button data-v="sans">Sem serifa</button></span></div>
+  <div class="row"><div class="grow">Tamanho da letra</div><span class="size"><button id="smaller">−</button><output id="size"></output><button id="bigger">+</button></span></div>
+  <div class="row"><div class="grow">Largura do texto</div><span class="seg" id="width"><button data-v="narrow">Estreita</button><button data-v="medium">Média</button><button data-v="wide">Larga</button></span></div>
+  <div class="row"><div class="grow">Botão flutuante em artigos<div class="hint">Mostra um atalho no canto das notícias e posts</div></div><label class="toggle"><input type="checkbox" id="fab"></label></div>
+  <script src="popup.js"></script>
+</body>
+</html>

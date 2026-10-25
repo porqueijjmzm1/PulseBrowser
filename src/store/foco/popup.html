@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+  <style>
+    .clock { position: relative; width: 170px; height: 170px; margin: 2px auto 10px; }
+    .clock svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .clock circle { fill: none; stroke-width: 9; }
+    .clock .track { stroke: var(--field); }
+    .clock .prog { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset 0.6s ease, stroke 0.3s; }
+    body.brk .clock .prog { stroke: #13a37d; }
+    .clock .txt { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+    .clock b { font-size: 38px; font-weight: 300; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+    .clock span { color: var(--muted); font-size: 12px; font-weight: 600; }
+    .btns { display: flex; gap: 8px; }
+    .btns button { flex: 1; height: 38px; border: 0; border-radius: 12px; background: var(--field); font-weight: 700; transition: filter 0.15s, transform 0.2s cubic-bezier(0.3, 1.5, 0.5, 1); }
+    .btns button:active { transform: scale(0.96); }
+    .btns button.main { background: var(--accent); color: #fff; }
+    body.brk .btns button.main { background: #13a37d; }
+    .btns button:hover { filter: brightness(1.06); }
+    .stats { text-align: center; color: var(--muted); font-size: 12px; margin: 8px 0 0; }
+    .chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0; }
+    .chip { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 4px 0 10px; border-radius: 13px; background: var(--field); font-size: 12px; }
+    .chip button { width: 20px; height: 20px; border: 0; border-radius: 50%; background: none; color: var(--muted); font-size: 14px; line-height: 1; }
+    .chip button:hover { background: var(--hover); color: var(--text); }
+    .add { display: flex; gap: 6px; }
+    .add input { flex: 1; min-width: 0; height: 32px; padding: 0 10px; border: 0; border-radius: 10px; background: var(--field); color: var(--text); font: inherit; outline: none; }
+    .add input:focus { box-shadow: inset 0 0 0 1.5px var(--accent); }
+    .add button { height: 32px; padding: 0 12px; border: 0; border-radius: 10px; background: var(--field); font-weight: 600; }
+    .quick { margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="icon.svg" alt="">
+    <div><b>Foco</b><span>Pomodoro que bloqueia distrações</span></div>
+  </header>
+
+  <div class="clock">
+    <svg viewBox="0 0 100 100"><circle class="track" cx="50" cy="50" r="44"/><circle class="prog" id="prog" cx="50" cy="50" r="44"/></svg>
+    <div class="txt"><b id="time">25:00</b><span id="mode">Pronto para focar</span></div>
+  </div>
+  <div class="btns">
+    <button class="main" id="main">Começar foco</button>
+    <button id="second">Pausa curta</button>
+  </div>
+  <p class="stats" id="stats"></p>
+
+  <div class="sec">Sites bloqueados durante o foco</div>
+  <div class="chips" id="sites"></div>
+  <form class="add" id="add"><input id="site" placeholder="Ex.: twitch.tv" spellcheck="false" autocomplete="off"><button>Adicionar</button></form>
+  <button class="link quick" id="this" hidden></button>
+
+  <div class="sec">Ajustes</div>
+  <div class="row"><div class="grow">Tempo de foco</div><span class="seg" id="focus"><button data-v="15">15</button><button data-v="25">25</button><button data-v="45">45</button><button data-v="60">60 min</button></span></div>
+  <div class="row"><div class="grow">Tempo de pausa</div><span class="seg" id="brk"><button data-v="5">5</button><button data-v="10">10</button><button data-v="15">15 min</button></span></div>
+  <div class="row"><div class="grow">Cronômetro nas páginas<div class="hint">Mostra o tempo no canto de cada site</div></div><label class="toggle"><input type="checkbox" id="pill"></label></div>
+  <script src="popup.js"></script>
+</body>
+</html>

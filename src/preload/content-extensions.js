@@ -56,6 +56,7 @@ const { ipcRenderer, webFrame, contextBridge } = require('electron');
       notify: (text) => call('notify', text),
       fetch: (url, opts) => call('fetch', url, opts),
       tabs: { create: (opts) => call('tabs.create', opts) },
+      action: { setBadge: (text, color) => call('action.setBadge', text, color) },
       browser: {
         resolve: (text) => call('browser.resolve', text),
         engine: () => call('browser.engine'),

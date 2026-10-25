@@ -1,0 +1,23 @@
+{
+  "name": "Modo Escuro",
+  "version": "1.0.0",
+  "author": "tuff.browse",
+  "description": "Deixa qualquer site escuro, com brilho, contraste e sépia ajustáveis. Ligue em todos os sites ou só nos que você escolher.",
+  "icon": "icon.svg",
+  "content_scripts": [
+    { "matches": ["*://*/*"], "js": ["content.js"], "run_at": "document_start" }
+  ],
+  "action": { "default_popup": "popup.html", "default_title": "Modo Escuro" },
+  "store": {
+    "category": "Aparência",
+    "color": "#3b3f9e",
+    "pin": true,
+    "about": "Inverte as cores das páginas claras e mantém fotos e vídeos com as cores originais. Você escolhe se quer o escuro em todos os sites ou só em alguns, e ajusta brilho, contraste e um toque de sépia para cansar menos a vista à noite.",
+    "features": [
+      "Liga e desliga por site com um clique",
+      "Modo \"todos os sites\" que pula os sites que já são escuros",
+      "Brilho, contraste e sépia ajustáveis na hora",
+      "Fotos, vídeos e tela cheia ficam com as cores certas"
+    ]
+  }
+}

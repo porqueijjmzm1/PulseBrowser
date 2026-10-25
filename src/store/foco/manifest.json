@@ -1,0 +1,23 @@
+{
+  "name": "Foco",
+  "version": "1.0.0",
+  "author": "tuff.browse",
+  "description": "Cronômetro Pomodoro que bloqueia YouTube, Instagram, TikTok e outros sites que distraem enquanto você foca.",
+  "icon": "icon.svg",
+  "content_scripts": [
+    { "matches": ["*://*/*"], "js": ["content.js"], "run_at": "document_start" }
+  ],
+  "action": { "default_popup": "popup.html", "default_title": "Foco" },
+  "store": {
+    "category": "Produtividade",
+    "color": "#f0553a",
+    "pin": true,
+    "about": "Escolha quanto tempo quer focar e o navegador segura as distrações por você: os sites da sua lista mostram uma tela de bloqueio com o tempo que falta. No fim, um aviso sugere uma pausa, e a extensão conta quantos focos você concluiu no dia.",
+    "features": [
+      "Focos de 15, 25, 45 ou 60 minutos, com pausas de 5 a 15",
+      "Lista de sites bloqueados que você edita (bloqueie o site aberto com um clique)",
+      "Cronômetro discreto no canto das páginas",
+      "Liberar um site por 5 minutos quando precisar"
+    ]
+  }
+}

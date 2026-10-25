@@ -1,7 +1,7 @@
 {
   "name": "tuff-browse",
   "productName": "tuff.browse",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "tuff.browse - navegador rápido e privado baseado em Chromium, com extensões e nova aba personalizável",
   "main": "src/main/main.js",
   "author": "tuff.browse",

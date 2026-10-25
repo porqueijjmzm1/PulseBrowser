@@ -26,7 +26,7 @@ const POPUP_MAX = { w: 780, h: 580 };
 // Métodos da API que os scripts de conteúdo (mundo isolado) podem usar.
 const CONTENT_METHODS = new Set([
   'storage.get', 'storage.set', 'storage.remove', 'storage.clear', 'notify', 'fetch',
-  'tabs.create', 'browser.resolve', 'browser.engine', 'runtime.openOptions',
+  'tabs.create', 'browser.resolve', 'browser.engine', 'runtime.openOptions', 'action.setBadge',
 ]);
 
 function str(v, max = 300) {
@@ -537,6 +537,7 @@ class Extensions extends EventEmitter {
         enabled: st.enabled,
         pinned: st.pinned,
         incognito: st.incognito,
+        store: !e.builtin && this.state.data.exts[e.id]?.source === 'store',
         errors: e.errors.slice(0, 8),
         popup: !!e.popup,
         run: !!e.run,
@@ -731,9 +732,17 @@ class Extensions extends EventEmitter {
   _storageChanged(id, changes) {
     const payload = { extId: id, type: 'storage', changes };
     for (const wc of this._allContents()) {
+      // Todos os quadros da página: scripts com all_frames rodam também dentro de iframes.
+      let frames = [];
       try {
-        wc.send('ext:event', payload);
-      } catch { /* ignora */ }
+        frames = wc.mainFrame.framesInSubtree;
+      } catch { /* página fechando */ }
+      for (const f of frames.length ? frames : [null]) {
+        try {
+          if (f) f.send('ext:event', payload);
+          else wc.send('ext:event', payload);
+        } catch { /* quadro descartado */ }
+      }
     }
   }
 

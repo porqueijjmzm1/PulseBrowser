@@ -513,6 +513,17 @@ function register() {
   internal('internal:ext-run', ({ window }, id) => exts().runAction(window, extId(id), null));
   internal('internal:ext-options', ({ window }, id) => exts().openOptions(window, exts().byId.get(extId(id))));
 
+  // ---- tuff Store
+  const tuffStore = () => {
+    if (!ctx.tuffStore) ctx.tuffStore = new (require('./tuffstore').TuffStore)(exts());
+    return ctx.tuffStore;
+  };
+  internal('internal:ext-store-list', (_c, opts) => tuffStore().list({ refresh: !!(opts && opts.refresh) }));
+  internal('internal:ext-store-install', (_c, id) => {
+    if (typeof id !== 'string') throw new Error('Extensão não encontrada');
+    return tuffStore().install(id);
+  });
+
   internal('internal:shield-stats', () => ctx.shield.status());
   internal('internal:shield-refresh', async () => ctx.shield.updateLists(true));
 

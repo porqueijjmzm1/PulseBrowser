@@ -6,11 +6,16 @@ Navegador para Windows baseado no **Chromium 152** (via Electron 44), com interf
 
 ## Download
 
-Baixe o instalador **tuff.browse-Setup-1.3.0.exe** na página de [Releases](../../releases/latest) (Windows 10/11, 64 bits).
+Baixe o instalador **tuff.browse-Setup-1.4.0.exe** na página de [Releases](../../releases/latest) (Windows 10/11, 64 bits).
 
 O instalador não tem assinatura digital, então o Windows pode mostrar "O Windows protegeu o computador". Clique em **Mais informações** e depois em **Executar assim mesmo**.
 
 Quem já usava o PulseBrowser não perde nada: na primeira abertura, o tuff.browse move as configurações, o histórico, os favoritos e as senhas para a pasta nova.
+
+## Novidades da versão 1.4
+
+- **tuff Store**: uma loja de extensões em `tuff://extensions/#store` (ou `tuff://store`). Instale com um clique o **Modo Escuro**, a **Velocidade de Vídeo**, o **Modo Leitura**, o **Foco** (Pomodoro que bloqueia distrações) e o **Tradutor**. Extensões novas e atualizações chegam pela internet, sem atualizar o navegador.
+- **Fonte do relógio**: o relógio do Desktop tem 16 fontes com prévia, qualquer fonte do Google Fonts ou instalada no computador, três espessuras e ajuste automático do tamanho.
 
 ## Novidades da versão 1.3
 
@@ -63,6 +68,20 @@ Cada extensão é uma pasta com um `manifest.json`. As suas ficam em `%APPDATA%\
 - Os scripts (fora do `MAIN`) e as páginas da extensão têm a API `tuff`: `tuff.storage` (dados que ficam salvos), `tuff.fetch` (pedidos para qualquer site, sem CORS), `tuff.tabs`, `tuff.notify`, `tuff.action.setBadge`, `tuff.browser` (buscador e configurações) e `tuff.runtime`. A documentação completa está em `tuff://extensions/#api`.
 - Os arquivos da extensão são servidos em `tuff-ext://<id>/arquivo`.
 
+### tuff Store
+
+A loja fica em `tuff://extensions/#store` (ou digite `tuff://store`; também há um atalho no botão de extensões). Ela tem cinco extensões feitas para o tuff.browse:
+
+| Extensão | O que faz |
+| --- | --- |
+| **Modo Escuro** | Escurece qualquer site, com brilho, contraste e sépia; liga por site ou em todos, pulando os que já são escuros. |
+| **Velocidade de Vídeo** | Muda a velocidade de qualquer vídeo (0,1× a 16×). Atalhos: S/D velocidade, R volta a 1×, G alterna 1×/2×, Z/X pulam segundos. |
+| **Modo Leitura** | Mostra só o texto do artigo, com tema claro, sépia ou escuro, tempo de leitura e leitura em voz alta (Alt+R). |
+| **Foco** | Cronômetro Pomodoro que bloqueia os sites que distraem e mostra o tempo no canto das páginas. |
+| **Tradutor** | Selecione um texto e clique em "Traduzir" (ou Alt+T); também traduz textos digitados e a página inteira. |
+
+O catálogo é lido de `src/store/index.json` neste repositório, então extensões novas e atualizações aparecem sem atualizar o navegador. Sem internet, a loja usa a cópia que vem com o app. Para publicar uma extensão na loja, crie a pasta em `src/store/<id>`, adicione a chave `"store"` no `manifest.json` (categoria, cor, descrição e recursos) e rode `node scripts/build-store.js`.
+
 ## Como usar
 
 Requer Node.js 22 ou mais recente.
@@ -105,6 +124,7 @@ Para gerar ícones novos a partir do logo: `npm run icon`.
 | Limpar dados de navegação | Ctrl+Shift+Delete |
 | Navegar pelas sugestões do corretor ou de login | ↑ / ↓, Enter, Esc |
 | Desktop (nova aba): selecionar tudo / apagar / sair da edição | Ctrl+A / Delete / Esc |
+| Modo Leitura / Tradutor (extensões da tuff Store) | Alt+R / Alt+T |
 
 ## Estrutura
 
@@ -115,9 +135,10 @@ src/
   ui/         barra de abas e ferramentas (index.html) e sobreposição de pop-ups (overlay.html)
   pages/      páginas internas tuff:// (nova aba, extensões, histórico, favoritos, downloads, senhas, configurações, sobre, erro)
   extensions/ extensões de fábrica (Desktop)
+  store/      extensões da tuff Store e o catálogo (index.json)
   shared/     ícones SVG compartilhados
   assets/     ícones do aplicativo
-scripts/      geração de ícones
+scripts/      geração de ícones e do catálogo da tuff Store
 build/        recursos do instalador
 ```
 
@@ -132,7 +153,8 @@ Os dados do usuário (configurações, histórico, favoritos, sessão, senhas cr
 
 - O corretor envia o texto dos campos em que você está escrevendo para a API pública do LanguageTool (`api.languagetool.org`), só depois que você clica no campo e digita. No Google Docs, envia o texto do documento aberto. Campos de senha, de busca, de e-mail, de código e marcados com `spellcheck="false"` nunca são enviados. Para manter o texto no seu computador, rode um [servidor LanguageTool](https://dev.languagetool.org/http-server) e informe o endereço em Configurações › Corretor gramatical, ou desligue o corretor.
 - O botão de perfil lê a lista de contas do Google conectadas a partir dos cookies do próprio navegador. Nada é enviado a outros serviços.
-- O Desktop busca os ícones dos sites no serviço de favicons do Google, o clima no [Open-Meteo](https://open-meteo.com) (só a cidade escolhida) e a foto do dia no Bing. O Spotify é o player oficial embutido do Spotify.
+- O Desktop busca os ícones dos sites no serviço de favicons do Google, o clima no [Open-Meteo](https://open-meteo.com) (só a cidade escolhida) e a foto do dia no Bing. As fontes do relógio que não vêm com o Windows são baixadas do Google Fonts. O Spotify é o player oficial embutido do Spotify.
+- A tuff Store baixa o catálogo e as extensões do GitHub. O Tradutor envia o texto que você pede para traduzir ao Google Tradutor.
 
 ## Limitações conhecidas
 

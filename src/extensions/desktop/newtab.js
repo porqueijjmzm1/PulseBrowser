@@ -618,6 +618,60 @@
     applyTileGlass();
   }
 
+  // ---------------------------------------------------------------- Fontes do relógio
+  // [id, nome, família CSS, fonte do Google Fonts (só com o peso 400 quando "single")]
+  const CLOCK_FONTS = [
+    ['system', 'Padrão', '"Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif'],
+    ['bahnschrift', 'Bahnschrift', 'Bahnschrift, "Segoe UI", sans-serif'],
+    ['cascadia', 'Cascadia', '"Cascadia Code", "Cascadia Mono", Consolas, monospace'],
+    ['georgia', 'Georgia', 'Georgia, "Times New Roman", serif'],
+    ['Inter', 'Inter', null, 'Inter'],
+    ['Poppins', 'Poppins', null, 'Poppins'],
+    ['Montserrat', 'Montserrat', null, 'Montserrat'],
+    ['Space Grotesk', 'Space Grotesk', null, 'Space Grotesk'],
+    ['Outfit', 'Outfit', null, 'Outfit'],
+    ['JetBrains Mono', 'JetBrains Mono', null, 'JetBrains Mono'],
+    ['Playfair Display', 'Playfair', null, 'Playfair Display'],
+    ['Orbitron', 'Orbitron', null, 'Orbitron'],
+    ['Bebas Neue', 'Bebas Neue', null, 'Bebas Neue', 'single'],
+    ['Righteous', 'Righteous', null, 'Righteous', 'single'],
+    ['Pacifico', 'Pacifico', null, 'Pacifico', 'single'],
+    ['Press Start 2P', 'Pixel', null, 'Press Start 2P', 'single'],
+  ];
+  const FONT_WEIGHTS = [['200', 'Fina'], ['400', 'Normal'], ['700', 'Negrito']];
+  const cleanFontName = (s) => String(s || '').replace(/[^\p{L}\p{N} -]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 48);
+  const fontLinks = new Map();
+  function googleFont(name, single, text) {
+    const fam = encodeURIComponent(name).replace(/%20/g, '+');
+    const key = `${name}|${text || ''}`;
+    if (fontLinks.has(key)) return fontLinks.get(key);
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    const base = `https://fonts.googleapis.com/css2?family=${fam}`;
+    const tail = `${text ? `&text=${encodeURIComponent(text)}` : ''}&display=swap`;
+    link.href = single ? base + tail : `${base}:wght@200;400;700${tail}`;
+    // Fonte com um peso só: o pedido com vários pesos falha, então tenta de novo sem eles.
+    if (!single) link.onerror = () => { link.onerror = null; link.href = base + tail; };
+    document.head.appendChild(link);
+    fontLinks.set(key, link);
+    return link;
+  }
+  // Família CSS de uma fonte escolhida (carrega do Google Fonts quando precisa).
+  function clockFamily(o) {
+    const fallback = '"Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif';
+    if (o.fontCustom) {
+      const name = cleanFontName(o.fontCustom);
+      if (!name) return fallback;
+      googleFont(name, false);
+      return `"${name}", ${fallback}`;
+    }
+    const f = CLOCK_FONTS.find((x) => x[0] === o.font);
+    if (!f || f[0] === 'system') return null;
+    if (f[2]) return f[2];
+    googleFont(f[3], f[4] === 'single');
+    return `"${f[3]}", ${fallback}`;
+  }
+
   // ---------------------------------------------------------------- Widgets
   const WIDGETS = {
     clock: {
@@ -634,6 +688,25 @@
             <line class="hand s" x1="50" y1="56" x2="50" y2="12" stroke-width="1.4"/><circle cx="50" cy="50" r="2.6" fill="#fff"/></svg></div>`;
         } else {
           el.innerHTML = '<div class="w-clock"><div class="time"></div><div class="date"></div><div class="greet"></div></div>';
+          const box = el.querySelector('.w-clock');
+          const family = clockFamily(o);
+          if (family) box.style.fontFamily = family;
+          if (o.weight) box.style.setProperty('--clock-weight', o.weight);
+          if (o.fontDate === false) box.classList.add('plain-date');
+        }
+        // A hora diminui sozinha quando a fonte é larga demais para o widget.
+        let lastText = '';
+        const fit = () => {
+          const t = el.querySelector('.time');
+          if (!t) return;
+          t.style.fontSize = '';
+          const room = el.clientWidth - 24;
+          const wide = t.scrollWidth;
+          if (room > 0 && wide > room) t.style.fontSize = `${Math.max(28, Math.floor(parseFloat(getComputedStyle(t).fontSize) * room / wide))}px`;
+        };
+        if (o.style !== 'analog') {
+          document.fonts?.ready.then(fit).catch(() => {});
+          document.fonts?.addEventListener?.('loadingdone', fit);
         }
         const tick = () => {
           const now = new Date();
@@ -650,6 +723,10 @@
           let t = now.toLocaleTimeString('pt-BR', opts);
           if (o.seconds) t += `<span class="sec">${String(now.getSeconds()).padStart(2, '0')}</span>`;
           el.querySelector('.time').innerHTML = t;
+          if (t.length !== lastText.length) {
+            lastText = t;
+            fit();
+          }
           const d = now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
           el.querySelector('.date').textContent = d.charAt(0).toUpperCase() + d.slice(1);
           const hr = now.getHours();
@@ -657,16 +734,73 @@
         };
         tick();
         const timer = setInterval(tick, 1000);
-        return () => clearInterval(timer);
+        const ro = new ResizeObserver(fit);
+        ro.observe(el);
+        return () => {
+          clearInterval(timer);
+          ro.disconnect();
+          document.fonts?.removeEventListener?.('loadingdone', fit);
+        };
       },
-      settings: (w) => ({
-        title: 'Relógio',
-        html: `${seg('style', 'Estilo', [['digital', 'Digital'], ['analog', 'Analógico']], w.opts.style || 'digital')}
-          ${toggleRow('seconds', 'Mostrar segundos', !!w.opts.seconds)}
-          ${toggleRow('greet', 'Saudação (bom dia, boa tarde…)', w.opts.greet !== false)}
-          ${toggleRow('card', 'Fundo de vidro', !!w.opts.card)}`,
-        apply: (f) => ({ ...w.opts, style: segVal(f, 'style'), seconds: f.seconds.checked, greet: f.greet.checked, card: f.card.checked }),
-      }),
+      settings: (w) => {
+        const o = w.opts;
+        const current = o.fontCustom ? '' : o.font || 'system';
+        const sample = '12:30';
+        // Prévia: um pedido só ao Google Fonts, com apenas os números (alguns KB).
+        const google = CLOCK_FONTS.filter((f) => f[3]);
+        const fonts = CLOCK_FONTS.map(([id, name, fam, g]) => `<button type="button" data-font="${esc(id)}" class="${id === current ? 'on' : ''}">
+            <b style="font-family:${esc(fam || `'${g}', sans-serif`)}">${sample}</b><span>${esc(name)}</span></button>`).join('');
+        return {
+          title: 'Relógio',
+          html: `${seg('style', 'Estilo', [['digital', 'Digital'], ['analog', 'Analógico']], o.style || 'digital')}
+            <div class="clock-font-opts"${o.style === 'analog' ? ' hidden' : ''}>
+              <div class="p-sec">Fonte</div>
+              <div class="fontpick">${fonts}</div>
+              <label class="font-custom"><span>Outra fonte (nome no Google Fonts ou instalada no computador)</span><input name="fontCustom" data-nofocus value="${esc(o.fontCustom || '')}" placeholder="Ex.: Comfortaa, Lobster, Arial" maxlength="48" spellcheck="false"></label>
+              ${seg('weight', 'Espessura', FONT_WEIGHTS, o.weight || '200')}
+              ${toggleRow('fontDate', 'Usar a fonte também na data', o.fontDate !== false)}
+            </div>
+            <div class="p-sec">Mostrar</div>
+            ${toggleRow('seconds', 'Mostrar segundos', !!o.seconds)}
+            ${toggleRow('greet', 'Saudação (bom dia, boa tarde…)', o.greet !== false)}
+            ${toggleRow('card', 'Fundo de vidro', !!o.card)}`,
+          init: (f) => {
+            const prev = google.map((g) => `family=${encodeURIComponent(g[3]).replace(/%20/g, '+')}`).join('&');
+            if (!fontLinks.has('preview')) {
+              const link = document.createElement('link');
+              link.rel = 'stylesheet';
+              link.href = `https://fonts.googleapis.com/css2?${prev}&text=${encodeURIComponent('0123456789:')}&display=swap`;
+              document.head.appendChild(link);
+              fontLinks.set('preview', link);
+            }
+            const pick = f.querySelector('.fontpick');
+            pick.addEventListener('click', (e) => {
+              const b = e.target.closest('[data-font]');
+              if (!b) return;
+              pick.querySelectorAll('[data-font]').forEach((x) => x.classList.toggle('on', x === b));
+              f.fontCustom.value = '';
+            });
+            f.fontCustom.addEventListener('input', () => {
+              const has = !!f.fontCustom.value.trim();
+              pick.querySelectorAll('[data-font]').forEach((x) => x.classList.toggle('on', !has && x.dataset.font === (o.font || 'system')));
+            });
+            f.querySelector('[data-seg="style"]').addEventListener('segchange', (e) => {
+              f.querySelector('.clock-font-opts').hidden = e.detail === 'analog';
+            });
+          },
+          apply: (f) => ({
+            ...o,
+            style: segVal(f, 'style'),
+            font: f.querySelector('.fontpick .on')?.dataset.font || 'system',
+            fontCustom: cleanFontName(f.fontCustom.value),
+            weight: segVal(f, 'weight') || '200',
+            fontDate: f.fontDate.checked,
+            seconds: f.seconds.checked,
+            greet: f.greet.checked,
+            card: f.card.checked,
+          }),
+        };
+      },
     },
 
     search: {
@@ -1061,7 +1195,7 @@
     dialogCtx = { validate, submit };
     modal.hidden = false;
     init?.(dialog);
-    setTimeout(() => dialog.querySelector('input:not([type=checkbox])')?.focus(), 40);
+    setTimeout(() => dialog.querySelector('input:not([type=checkbox]):not([data-nofocus])')?.focus(), 40);
   }
   function closeDialog() {
     modal.hidden = true;

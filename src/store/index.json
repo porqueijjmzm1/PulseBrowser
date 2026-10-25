@@ -1,0 +1,140 @@
+{
+  "format": 1,
+  "extensions": [
+    {
+      "id": "foco",
+      "name": "Foco",
+      "version": "1.0.0",
+      "author": "tuff.browse",
+      "description": "Cronômetro Pomodoro que bloqueia YouTube, Instagram, TikTok e outros sites que distraem enquanto você foca.",
+      "icon": "icon.svg",
+      "category": "Produtividade",
+      "color": "#f0553a",
+      "pin": true,
+      "about": "Escolha quanto tempo quer focar e o navegador segura as distrações por você: os sites da sua lista mostram uma tela de bloqueio com o tempo que falta. No fim, um aviso sugere uma pausa, e a extensão conta quantos focos você concluiu no dia.",
+      "features": [
+        "Focos de 15, 25, 45 ou 60 minutos, com pausas de 5 a 15",
+        "Lista de sites bloqueados que você edita (bloqueie o site aberto com um clique)",
+        "Cronômetro discreto no canto das páginas",
+        "Liberar um site por 5 minutos quando precisar"
+      ],
+      "files": [
+        "content.js",
+        "icon.svg",
+        "manifest.json",
+        "popup.css",
+        "popup.html",
+        "popup.js"
+      ],
+      "size": 22554
+    },
+    {
+      "id": "modo-escuro",
+      "name": "Modo Escuro",
+      "version": "1.0.0",
+      "author": "tuff.browse",
+      "description": "Deixa qualquer site escuro, com brilho, contraste e sépia ajustáveis. Ligue em todos os sites ou só nos que você escolher.",
+      "icon": "icon.svg",
+      "category": "Aparência",
+      "color": "#3b3f9e",
+      "pin": true,
+      "about": "Inverte as cores das páginas claras e mantém fotos e vídeos com as cores originais. Você escolhe se quer o escuro em todos os sites ou só em alguns, e ajusta brilho, contraste e um toque de sépia para cansar menos a vista à noite.",
+      "features": [
+        "Liga e desliga por site com um clique",
+        "Modo \"todos os sites\" que pula os sites que já são escuros",
+        "Brilho, contraste e sépia ajustáveis na hora",
+        "Fotos, vídeos e tela cheia ficam com as cores certas"
+      ],
+      "files": [
+        "content.js",
+        "icon.svg",
+        "manifest.json",
+        "popup.css",
+        "popup.html",
+        "popup.js"
+      ],
+      "size": 12532
+    },
+    {
+      "id": "modo-leitura",
+      "name": "Modo Leitura",
+      "version": "1.0.0",
+      "author": "tuff.browse",
+      "description": "Mostra só o texto de notícias e artigos, sem anúncios nem menus, com tema claro, sépia ou escuro e leitura em voz alta.",
+      "icon": "icon.svg",
+      "category": "Produtividade",
+      "color": "#13866a",
+      "pin": true,
+      "about": "Transforma páginas cheias de anúncios, menus e pop-ups numa página limpa, só com o título, o texto e as imagens do artigo. Escolha a fonte, o tamanho da letra e o tema, ou peça para o navegador ler o texto em voz alta.",
+      "features": [
+        "Abre com Alt+R ou pelo botão na barra",
+        "Temas claro, sépia e escuro, com fonte com ou sem serifa",
+        "Mostra o tempo de leitura do artigo",
+        "Lê o texto em voz alta e destaca o parágrafo que está sendo lido"
+      ],
+      "files": [
+        "content.js",
+        "icon.svg",
+        "manifest.json",
+        "popup.css",
+        "popup.html",
+        "popup.js"
+      ],
+      "size": 27056
+    },
+    {
+      "id": "tradutor",
+      "name": "Tradutor",
+      "version": "1.0.0",
+      "author": "tuff.browse",
+      "description": "Selecione um texto em qualquer site e veja a tradução na hora, sem sair da página. Também traduz a página inteira.",
+      "icon": "icon.svg",
+      "category": "Produtividade",
+      "color": "#2a7de1",
+      "pin": true,
+      "about": "Ao selecionar um trecho de texto, aparece um botão \"Traduzir\" ao lado. A tradução abre num cartão por cima da página, com o idioma detectado, e dá para copiar ou ouvir. Pelo botão na barra você traduz um texto digitado ou abre a página inteira traduzida.",
+      "features": [
+        "Traduz o texto selecionado com um clique ou com Alt+T",
+        "Detecta o idioma sozinho; escolha entre 10 idiomas de destino",
+        "Copiar e ouvir a tradução",
+        "Traduzir a página inteira pelo Google Tradutor"
+      ],
+      "files": [
+        "content.js",
+        "icon.svg",
+        "manifest.json",
+        "popup.css",
+        "popup.html",
+        "popup.js"
+      ],
+      "size": 20537
+    },
+    {
+      "id": "velocidade-video",
+      "name": "Velocidade de Vídeo",
+      "version": "1.0.0",
+      "author": "tuff.browse",
+      "description": "Acelere ou desacelere qualquer vídeo (YouTube, cursos, redes sociais) com atalhos de teclado e veja a velocidade por cima do vídeo.",
+      "icon": "icon.svg",
+      "category": "Vídeo",
+      "color": "#ff5a5f",
+      "pin": true,
+      "about": "Assista aulas, podcasts e vídeos longos no seu ritmo. Funciona em qualquer site com vídeo, inclusive nos players dentro de outras páginas, e a velocidade escolhida continua valendo quando você troca de vídeo.",
+      "features": [
+        "De 0,1× até 16×, com botões rápidos de 0,5× a 3×",
+        "Atalhos: S e D mudam a velocidade, R volta para 1×, Z e X pulam alguns segundos",
+        "Mostra a velocidade por cima do vídeo, até em tela cheia",
+        "Número no botão da barra quando a velocidade não é 1×"
+      ],
+      "files": [
+        "content.js",
+        "icon.svg",
+        "manifest.json",
+        "popup.css",
+        "popup.html",
+        "popup.js"
+      ],
+      "size": 16635
+    }
+  ]
+}
