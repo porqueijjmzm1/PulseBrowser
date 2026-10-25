@@ -242,6 +242,15 @@ function guessCategory(hostname, pathname, type) {
 
 const ALLOW = Object.freeze({ action: 'allow' });
 
+// Pedidos do player do YouTube que as listas bloqueiam, mas que ele usa para medir a conexão: sem as
+// respostas, o player acha que a internet está ruim e mostra "Está a ter interrupções?" o tempo todo.
+// Só valem dentro do próprio YouTube (ou do player embutido em outros sites).
+const YOUTUBE_HOSTS = new Set(['youtube.com', 'youtube-nocookie.com']);
+const YOUTUBE_PLAYER_PATHS = /^\/(?:api\/stats\/(?:qoe|watchtime|playback|delayplay|atr)|ptracking|generate_204)(?:$|[/?])/;
+function isYoutubePlayerPing(domain, sourceDomain, pathname) {
+  return YOUTUBE_HOSTS.has(domain) && YOUTUBE_HOSTS.has(sourceDomain) && YOUTUBE_PLAYER_PATHS.test(pathname);
+}
+
 // Junta os scripts de correção num só, cada um no seu escopo: rodando soltos no mesmo escopo global,
 // as declarações de topo (class/let) colidem e o script falha (quebrava o player do YouTube).
 // Repetidos saem; um script com erro não impede os outros.
@@ -288,6 +297,7 @@ class ShieldCore {
     const req = Request.fromRawDetails({ url, sourceUrl, type, sourceHostname, sourceDomain });
     if (!req.isSupported) return ALLOW;
     const pathname = pathOf(url);
+    if (isYoutubePlayerPing(req.domain, sourceDomain, pathname)) return ALLOW;
     const hit = this.rules.lookup(req.hostname, pathname);
     if (hit && disabled && disabled.has(hit.cat)) return ALLOW;
 
