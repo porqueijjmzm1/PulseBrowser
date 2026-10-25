@@ -187,11 +187,84 @@
   window.pulse.on('internal:passwords-changed', () => renderPasswordCount());
 
   // ---------------------------------------------------------------- Shield
-  async function renderShieldStats() {
-    const st = await window.pulse.invoke('internal:shield-stats');
-    const ext = st.extended ? ` + ${st.extended.toLocaleString('pt-BR')} da lista ampliada` : '';
-    $('#shield-stats').textContent = `${st.total.toLocaleString('pt-BR')} itens bloqueados até agora • ${st.builtin} domínios na lista interna${ext}`;
+  const num = (n) => Number(n || 0).toLocaleString('pt-BR');
+  function ago(ts) {
+    if (!ts) return 'nunca';
+    const m = Math.round((Date.now() - ts) / 60000);
+    if (m < 1) return 'agora mesmo';
+    if (m < 60) return `há ${m} min`;
+    const h = Math.round(m / 60);
+    if (h < 24) return `há ${h} h`;
+    const d = Math.round(h / 24);
+    return d === 1 ? 'ontem' : `há ${d} dias`;
   }
+  let shieldStatus = null;
+  function renderShield(st) {
+    if (!st) return;
+    shieldStatus = st;
+    const rules = st.builtin + (st.engine ? st.engine.network + st.engine.cosmetic : 0);
+    $('#shield-stats').textContent = `${num(st.total)} itens bloqueados até agora • ${num(rules)} regras ativas`;
+
+    // Categorias: as fixas viram etiquetas; as opcionais têm interruptor.
+    const always = st.categories.filter((c) => !c.optional);
+    $('#shield-always').innerHTML = always.map((c, i) => `<span class="cat-chip" style="--i:${i}"><i class="cat-dot" style="--c:${esc(c.color)}"></i>${esc(c.label)}</span>`).join('');
+    const box = $('#shield-cats');
+    for (const c of st.categories.filter((x) => x.optional)) {
+      let row = box.querySelector(`[data-cat="${c.id}"]`);
+      if (!row) {
+        row = document.createElement('div');
+        row.className = 'setting';
+        row.dataset.cat = c.id;
+        row.dataset.k = `${c.label} ${c.desc}`.toLowerCase();
+        row.innerHTML = `<div class="text"><div class="title"><i class="cat-dot" style="--c:${esc(c.color)}"></i>${esc(c.label)}</div><div class="desc">${esc(c.desc)}</div></div>
+          <label class="switch"><input type="checkbox"></label>`;
+        row.querySelector('input').addEventListener('change', (e) => {
+          set('shieldCategories', { ...(s.shieldCategories || {}), [c.id]: e.target.checked });
+        });
+        box.appendChild(row);
+      }
+      row.querySelector('input').checked = c.enabled;
+    }
+
+    // Listas de filtros
+    const lists = $('#shield-lists');
+    const foot = lists.querySelector('.lists-foot');
+    for (const l of st.lists) {
+      let row = lists.querySelector(`[data-list="${l.id}"]`);
+      if (!row) {
+        row = document.createElement('div');
+        row.className = 'setting';
+        row.dataset.list = l.id;
+        row.dataset.k = `lista filtros ${l.name} ${l.desc}`.toLowerCase();
+        row.innerHTML = `<div class="text"><div class="title">${esc(l.name)}</div><div class="desc">${esc(l.desc)}<span class="list-meta"></span></div></div>
+          <label class="switch"><input type="checkbox"></label>`;
+        row.querySelector('input').addEventListener('change', (e) => {
+          set('shieldLists', { ...(s.shieldLists || {}), [l.id]: e.target.checked });
+        });
+        lists.insertBefore(row, foot);
+      }
+      row.querySelector('input').checked = l.enabled;
+      const meta = row.querySelector('.list-meta');
+      meta.classList.toggle('err', !!l.error && !l.downloaded);
+      if (!l.enabled) meta.textContent = 'Desligada';
+      else if (l.error && !l.downloaded) meta.textContent = `Erro ao baixar: ${l.error}`;
+      else if (!l.downloaded) meta.textContent = st.updating ? 'Baixando…' : 'Ainda não baixada';
+      else meta.textContent = `${num(l.rules)} regras • atualizada ${ago(l.updatedAt)}`;
+    }
+    const btn = $('#shield-refresh');
+    btn.disabled = st.updating;
+    btn.classList.toggle('spin', st.updating);
+    const status = $('#shield-lists-status');
+    if (st.updating) status.textContent = 'Baixando e preparando as listas…';
+    else if (st.error) status.textContent = st.error;
+    else if (st.engine) status.textContent = `As listas são atualizadas a cada 2 dias. Montadas ${ago(st.engine.builtAt)}.`;
+    else status.textContent = 'As listas são baixadas na primeira vez que o navegador abre. Até lá vale a lista interna.';
+    $$('#shield-cats .setting, #shield-lists .setting').forEach((row) => row.classList.toggle('dim', !s.shieldEnabled));
+  }
+  async function renderShieldStats() {
+    renderShield(await window.pulse.invoke('internal:shield-stats'));
+  }
+  window.pulse.on('internal:shield-changed', (st) => renderShield(st));
   function normalizeHost(v) {
     let h = String(v || '').trim().toLowerCase();
     h = h.replace(/^[a-z]+:\/\//, '').split(/[/?#]/)[0].replace(/^www\./, '').replace(/:\d+$/, '');
@@ -226,13 +299,16 @@
     if (e.key === 'Enter') $('#allow-add').click();
   });
   $('#shield-refresh').addEventListener('click', async () => {
-    $('#shield-refresh').disabled = true;
+    const btn = $('#shield-refresh');
+    btn.disabled = true;
+    btn.classList.add('spin');
     try {
-      const n = await window.pulse.invoke('internal:shield-refresh');
-      toast(n ? `Lista ampliada atualizada: ${n.toLocaleString('pt-BR')} domínios` : 'Não foi possível baixar a lista agora');
+      const st = await window.pulse.invoke('internal:shield-refresh');
+      renderShield(st);
+      toast(st.error ? st.error : `Listas atualizadas: ${num(st.engine ? st.engine.network + st.engine.cosmetic : 0)} regras`);
+    } catch (err) {
+      toast(`Não foi possível atualizar: ${cleanError(err)}`);
       renderShieldStats();
-    } finally {
-      $('#shield-refresh').disabled = false;
     }
   });
 

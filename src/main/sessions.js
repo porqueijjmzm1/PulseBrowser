@@ -11,6 +11,7 @@ const configured = new WeakSet();
 const CONTENT_SCRIPTS = [
   { id: 'pulse-passwords', file: 'content-passwords.js' },
   { id: 'pulse-grammar', file: 'content-grammar.js' },
+  { id: 'pulse-shield', file: 'content-shield.js' },
 ];
 const certExceptions = new WeakMap(); // session -> Set(host)
 

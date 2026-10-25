@@ -22,7 +22,7 @@ O instalador não tem assinatura digital, então o Windows pode mostrar "O Windo
 
 - **Abas completas**: arrastar para reordenar, fixar, silenciar, duplicar, mover para nova janela, reabrir abas fechadas (Ctrl+Shift+T), fechar outras/à direita e botão do meio para fechar.
 - **Barra de endereço inteligente**: sugestões do mecanismo de pesquisa, histórico, favoritos e abas abertas ("Mudar para esta aba"), autocompletar em linha, Alt+Enter (nova aba) e Ctrl+Enter (completa `www.…com`).
-- **Pulse Shield**: bloqueador de anúncios, rastreadores e mineradores com contador por página, exceções por site e uma lista ampliada opcional.
+- **Pulse Shield**: bloqueador de anúncios, rastreadores, telemetria, golpes e mineradores. Usa as mesmas listas de filtros do uBlock Origin (EasyList, EasyPrivacy, filtros do uBlock, EasyList Portuguese, Peter Lowe e HaGeZi), que são atualizadas sozinhas a cada poucos dias, mais uma lista interna com 11 categorias. Esconde os espaços vazios de anúncio e os avisos de cookies, pula os anúncios do YouTube, limpa parâmetros de rastreamento dos links (`fbclid`, `gclid`, `utm_*`…) e troca scripts de anúncio por versões inofensivas para não quebrar players de vídeo. O pop-up mostra o que foi bloqueado em cada categoria; em Configurações dá para escolher as categorias, as listas e as exceções por site. Faz 99% no [superadblocktest.com](https://superadblocktest.com).
 - **Janela anônima**: sessão separada na memória, apagada quando a última janela anônima é fechada.
 - **Favoritos**: barra de favoritos com pastas, gerenciador (`pulse://bookmarks`), importação do Google Chrome e de arquivos HTML, exportação.
 - **Histórico** (`pulse://history`) com busca, agrupado por dia, seleção múltipla.
@@ -91,6 +91,11 @@ build/        recursos do instalador
 
 Os dados do usuário (configurações, histórico, favoritos, sessão e senhas criptografadas) ficam em `%APPDATA%\PulseBrowser`.
 
+### Privacidade do Pulse Shield
+
+- As listas de filtros são baixadas dos repositórios oficiais (ou de um espelho no GitHub mantido pela Ghostery) e ficam em `%APPDATA%\PulseBrowser\shield`. Nenhuma informação sobre os sites que você visita é enviada.
+- O motor de filtros é o [@ghostery/adblocker](https://github.com/ghostery/adblocker) (licença MPL-2.0). As listas têm licenças próprias (GPL-3.0, CC BY-SA e outras) e não vêm junto com o instalador.
+
 ### Privacidade do corretor e das contas
 
 - O corretor envia o texto dos campos em que você está escrevendo para a API pública do LanguageTool (`api.languagetool.org`), só depois que você clica no campo e digita. Campos de senha, de código e marcados com `spellcheck="false"` nunca são enviados. Para manter o texto no seu computador, rode um [servidor LanguageTool](https://dev.languagetool.org/http-server) e informe o endereço em Configurações › Corretor gramatical, ou desligue o corretor.
@@ -104,4 +109,5 @@ Os dados do usuário (configurações, histórico, favoritos, sessão e senhas c
 - O login do Google funciona pelo site (como no Firefox). Recursos que dependem do login do próprio Chrome, como a sincronização do Chrome, não estão disponíveis.
 - O corretor gramatical usa a API pública gratuita do LanguageTool, que tem limite de uso: textos muito longos (mais de 15 mil caracteres) são verificados só em parte e, se você escrever muito rápido em vários campos, a verificação pode pausar por um minuto.
 - A localização (geolocalização) pode não funcionar, pois o serviço do Google exige uma chave de API.
-- O Pulse Shield bloqueia por domínio; não remove anúncios servidos pelo próprio site (como os anúncios em vídeo do YouTube, que ele apenas acelera e pula).
+- O Pulse Shield não bloqueia o player JW Player (`ssl.p.jwpcdn.com`), só os plugins de anúncio dele, porque muitos sites de notícias usam esse player nos vídeos comuns.
+- As categorias opcionais (redes sociais, chat de atendimento, avisos de cookies, testes A/B, rastreadores de erros e afiliados) vêm ligadas. Se um site perder o chat, o botão "Curtir" ou um link de oferta, desligue a categoria em Configurações › Pulse Shield ou adicione o site às exceções.

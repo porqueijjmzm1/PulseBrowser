@@ -49,5 +49,9 @@
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico"
     }
+  },
+  "dependencies": {
+    "@ghostery/adblocker": "^2.20.1",
+    "tldts-experimental": "^7.4.19"
   }
 }

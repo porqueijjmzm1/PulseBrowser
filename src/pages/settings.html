@@ -122,16 +122,34 @@
         <div class="card">
           <div class="setting shield-hero" data-k="shield bloqueador anúncios rastreadores">
             <div class="hero-icon" data-icon="shieldCheck" data-size="26"></div>
-            <div class="text"><div class="title">Bloquear anúncios, rastreadores e mineradores</div><div class="desc" id="shield-stats">—</div></div>
+            <div class="text"><div class="title">Bloquear anúncios, rastreadores e golpes</div><div class="desc" id="shield-stats">—</div></div>
             <label class="switch"><input type="checkbox" data-setting="shieldEnabled"></label>
           </div>
-          <div class="setting" data-k="lista ampliada shield">
-            <div class="text"><div class="title">Usar lista ampliada</div><div class="desc">Baixa uma lista pública com milhares de domínios de anúncios (atualizada semanalmente)</div></div>
-            <button class="btn" id="shield-refresh">Atualizar agora</button>
-            <label class="switch"><input type="checkbox" data-setting="shieldExtendedList"></label>
+          <div class="setting" data-k="limpar links parâmetros rastreamento fbclid gclid msclkid">
+            <div class="text"><div class="title">Limpar links de rastreamento</div><div class="desc">Tira códigos como fbclid, gclid e msclkid dos endereços que você abre</div></div>
+            <label class="switch"><input type="checkbox" data-setting="shieldStripParams"></label>
           </div>
+        </div>
+
+        <h3 class="sub">O que bloquear</h3>
+        <div class="card" id="shield-cats">
+          <div class="setting col" data-k="sempre bloqueados anúncios vídeo rastreadores telemetria mineradores">
+            <div class="text"><div class="title">Sempre bloqueados</div><div class="desc">Enquanto o Shield estiver ligado</div></div>
+            <div class="cat-chips" id="shield-always"></div>
+          </div>
+        </div>
+
+        <h3 class="sub">Listas de filtros</h3>
+        <div class="card" id="shield-lists">
+          <div class="setting lists-foot" data-k="atualizar listas filtros easylist ublock hagezi">
+            <div class="text"><div class="title">Atualização automática</div><div class="desc" id="shield-lists-status">—</div></div>
+            <button class="btn" id="shield-refresh"><span data-icon="refreshCcw" data-size="16"></span>Atualizar agora</button>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:14px">
           <div class="setting col" data-k="sites permitidos exceções shield">
-            <div class="text"><div class="title">Sites sem bloqueio</div><div class="desc">O Shield fica desligado nesses sites</div></div>
+            <div class="text"><div class="title">Sites sem bloqueio</div><div class="desc">O Shield fica desligado nesses sites. Use se algum site não funcionar direito.</div></div>
             <div id="allowlist" class="chips"></div>
             <div class="row"><input class="input" id="allow-input" placeholder="exemplo.com"><button class="btn" id="allow-add">Adicionar</button></div>
           </div>

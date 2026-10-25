@@ -43,6 +43,7 @@ class Tab {
     this.crashed = false;
     this.blocked = 0;
     this.blockedHosts = new Set();
+    this.blockedCats = {};
     this.zoom = 1;
     this.openerId = opts.opener ? opts.opener.id : null;
     this.lastActive = Date.now();
@@ -147,6 +148,7 @@ class Tab {
       this.historyId = null;
       this.blocked = 0;
       this.blockedHosts.clear();
+      this.blockedCats = {};
       this.favicon = '';
       this.zoom = wc.getZoomFactor();
       if (url.startsWith('pulse://error')) {
@@ -215,9 +217,6 @@ class Tab {
     wc.on('update-target-url', (_e, url) => {
       if (this.window.activeTab === this) this.window.setStatus(url);
     });
-    wc.on('dom-ready', () => {
-      ctx.shield.applyCosmetics(wc, wc.getURL());
-    });
     wc.on('will-navigate', (details) => {
       // Sites comuns não podem abrir páginas internas do navegador.
       if (isInternal(details.url) && !isInternal(wc.getURL())) details.preventDefault();
@@ -273,9 +272,10 @@ class Tab {
     wc.loadURL(`pulse://error/?${q.toString()}`).catch(() => {});
   }
 
-  onRequestBlocked(host) {
+  onRequestBlocked(host, cat = 'ads') {
     this.blocked += 1;
     this.blockedHosts.add(host);
+    this.blockedCats[cat] = (this.blockedCats[cat] || 0) + 1;
     this._update();
   }
 

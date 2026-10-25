@@ -819,6 +819,8 @@ class PulseWindow {
           allowed: ctx.shield.isAllowlisted(host),
           blocked: tab ? tab.blocked : 0,
           hosts: tab ? [...tab.blockedHosts].slice(0, 30) : [],
+          cats: tab ? { ...tab.blockedCats } : {},
+          catMeta: require('./blocklist').CATEGORIES.map((c) => ({ id: c.id, label: c.label, color: c.color })),
           total: ctx.shield.total,
         };
         p.focus = true;

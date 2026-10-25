@@ -153,10 +153,7 @@ function wireEvents() {
       sessions.applySpellcheck(session.defaultSession);
       if (ctx.incognitoSession) sessions.applySpellcheck(ctx.incognitoSession);
     }
-    if (key === 'shieldExtendedList') {
-      if (data.shieldExtendedList) ctx.shield.loadExtended();
-      else ctx.shield.unloadExtended();
-    }
+    if (key === 'shieldLists' || key === 'shieldCategories') ctx.shield.reconfigure();
     for (const w of ctx.windows) {
       w.sendUI('ui:settings', data);
       if (key === 'animations') w._sendOverlay('overlay:settings', { animations: data.animations });
@@ -308,6 +305,7 @@ async function init() {
   ctx.grammar.register();
   wireEvents();
   ctx.accounts.start();
+  ctx.shield.start();
   setupJumpList();
   startMemorySaver();
 

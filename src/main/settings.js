@@ -56,8 +56,11 @@ const DEFAULTS = {
   searchEngine: 'google',
   searchSuggestions: true,
   shieldEnabled: true,
-  shieldExtendedList: false,
   shieldAllowlist: [],
+  // Listas de filtros e categorias opcionais (ausente = ligada)
+  shieldLists: { easylist: true, easyprivacy: true, ublock: true, easylistpt: true, peterlowe: true, hagezi: true, hagezinative: true },
+  shieldCategories: { social: true, affiliate: true, errors: true, consent: true, experiments: true, messaging: true },
+  shieldStripParams: true,
   doNotTrack: true,
   downloadDir: '',
   askDownload: false,
@@ -92,6 +95,12 @@ const DEFAULTS = {
   animations: true,
 };
 
+// Objeto { chave: true/false } só com chaves conhecidas.
+function isFlagMap(v, keys) {
+  return !!v && typeof v === 'object' && !Array.isArray(v)
+    && Object.entries(v).every(([k, b]) => keys.includes(k) && typeof b === 'boolean');
+}
+
 // Valores aceitos para cada configuração editável a partir das páginas internas.
 const VALIDATORS = {
   theme: (v) => ['system', 'light', 'dark'].includes(v),
@@ -104,8 +113,10 @@ const VALIDATORS = {
   searchEngine: (v) => Object.hasOwn(ENGINES, v),
   searchSuggestions: (v) => typeof v === 'boolean',
   shieldEnabled: (v) => typeof v === 'boolean',
-  shieldExtendedList: (v) => typeof v === 'boolean',
   shieldAllowlist: (v) => Array.isArray(v) && v.every((s) => typeof s === 'string'),
+  shieldLists: (v) => isFlagMap(v, ['easylist', 'easyprivacy', 'ublock', 'easylistpt', 'peterlowe', 'hagezi', 'hagezinative']),
+  shieldCategories: (v) => isFlagMap(v, ['social', 'affiliate', 'errors', 'consent', 'experiments', 'messaging']),
+  shieldStripParams: (v) => typeof v === 'boolean',
   doNotTrack: (v) => typeof v === 'boolean',
   askDownload: (v) => typeof v === 'boolean',
   memorySaver: (v) => typeof v === 'boolean',

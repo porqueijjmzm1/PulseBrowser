@@ -22,7 +22,7 @@
     ['spellCheck', 'Corretor gramatical', 'Sublinha erros enquanto você escreve nos sites e corrige com um clique, em 25 idiomas.'],
     ['sparkles', 'Animações fluidas', 'Abas, menus, pop-ups e páginas com movimentos suaves (podem ser desligados).'],
     ['layers', 'Abas completas', 'Arrastar para reordenar, fixar, silenciar, duplicar, mover para nova janela e reabrir abas fechadas.'],
-    ['shieldCheck', 'Pulse Shield', 'Bloqueio interno de anúncios, rastreadores e mineradores, com contador por página e exceções por site.'],
+    ['shieldCheck', 'Pulse Shield', 'Bloqueia anúncios, rastreadores, telemetria e golpes com as listas do uBlock Origin (atualizadas sozinhas), esconde avisos de cookies, pula anúncios do YouTube e limpa links de rastreamento.'],
     ['incognito', 'Janela anônima', 'Sessão separada na memória, apagada ao fechar a última janela anônima.'],
     ['search', 'Barra de endereço inteligente', 'Sugestões de pesquisa, histórico, favoritos, abas abertas e autocompletar.'],
     ['bookmark', 'Favoritos', 'Barra de favoritos, pastas, gerenciador, importação do Chrome e de arquivos HTML.'],

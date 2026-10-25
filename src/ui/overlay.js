@@ -232,6 +232,17 @@
     popup.querySelector('[data-cmd]').addEventListener('click', () => act({ act: 'command', cmd: 'downloads' }));
   }
 
+  // Barras por categoria (anúncios, rastreadores, redes sociais...) do que foi bloqueado nesta página.
+  function shieldBreakdown(d) {
+    const meta = d.catMeta || [];
+    const rows = meta.map((c) => ({ ...c, n: (d.cats || {})[c.id] || 0 })).filter((c) => c.n > 0).sort((a, b) => b.n - a.n);
+    if (!rows.length) return '';
+    const max = rows[0].n;
+    return `<div class="sh-cats">${rows.map((c, i) => `<div class="sh-cat" style="--c:${esc(c.color)};--i:${i}">
+      <span class="sh-cat-label"><i></i>${esc(c.label)}</span><span class="sh-cat-n">${c.n}</span>
+      <span class="sh-bar"><b style="width:${Math.max(6, Math.round((c.n / max) * 100))}%"></b></span></div>`).join('')}</div>`;
+  }
+
   function renderShield(d) {
     if (!d.enabled) {
       popup.innerHTML = `<div class="pad">
@@ -255,7 +266,8 @@
       <div class="sh-head"><div class="sh-logo ${on ? '' : 'off'}">${icon(on ? 'shieldCheck' : 'shieldOff', 22)}</div>
         <div class="sh-title"><b>Pulse Shield</b><div class="muted" title="${esc(d.host)}">${esc(d.host)}</div></div>
         <label class="switch" title="${on ? 'Desativar para este site' : 'Ativar para este site'}"><input type="checkbox" id="sh-toggle" ${on ? 'checked' : ''}></label></div>
-      ${on ? `<div class="sh-count"><span class="big">${d.blocked}</span><span>anúncios e rastreadores bloqueados nesta página</span></div>
+      ${on ? `<div class="sh-count"><span class="big">${d.blocked}</span><span>${d.blocked === 1 ? 'item bloqueado' : 'itens bloqueados'} nesta página</span></div>
+      ${shieldBreakdown(d)}
       ${d.hosts.length ? `<details><summary>Ver domínios bloqueados (${d.hosts.length})</summary><ul class="sh-list">${d.hosts.map((h) => `<li>${esc(h)}</li>`).join('')}</ul></details>` : ''}`
     : '<p class="muted" style="margin-top:12px">A proteção está desligada para este site. Ligue-a para bloquear anúncios e rastreadores.</p>'}
       <div class="sh-foot"><span>${d.total.toLocaleString('pt-BR')} bloqueados no total</span><a class="link" id="sh-settings">Configurações</a></div>

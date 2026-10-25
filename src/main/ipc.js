@@ -10,7 +10,6 @@ const ctx = require('./context');
 const { localSuggestions, remoteSuggestions, resolveInput, looksLikeUrl } = require('./omnibox');
 const { ENGINES, ACCENTS } = require('./settings');
 const permissions = require('./permissions');
-const BUILTIN = require('./blocklist');
 
 const execFileAsync = promisify(execFile);
 
@@ -425,12 +424,8 @@ function register() {
     return true;
   });
 
-  internal('internal:shield-stats', () => ({
-    total: ctx.shield.total,
-    builtin: new Set(BUILTIN).size,
-    extended: ctx.shield.extended.size,
-  }));
-  internal('internal:shield-refresh', async () => ctx.shield.loadExtended(true));
+  internal('internal:shield-stats', () => ctx.shield.status());
+  internal('internal:shield-refresh', async () => ctx.shield.updateLists(true));
 
   internal('internal:spellcheck-languages', () => session.defaultSession.availableSpellCheckerLanguages);
 
