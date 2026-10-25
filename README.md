@@ -6,9 +6,14 @@ Navegador para Windows baseado no **Chromium 152** (via Electron 44), com interf
 
 ## Download
 
-Baixe o instalador **PulseBrowser-Setup-1.1.0.exe** na página de [Releases](../../releases/latest) (Windows 10/11, 64 bits).
+Baixe o instalador **PulseBrowser-Setup-1.2.0.exe** na página de [Releases](../../releases/latest) (Windows 10/11, 64 bits).
 
 O instalador não tem assinatura digital, então o Windows pode mostrar "O Windows protegeu o computador". Clique em **Mais informações** e depois em **Executar assim mesmo**.
+
+## Novidades da versão 1.2
+
+- **Pulse Shield muito mais forte**: agora usa as mesmas listas de filtros do uBlock Origin (EasyList, EasyPrivacy, filtros do uBlock, EasyList Portuguese, Peter Lowe e HaGeZi), atualizadas sozinhas, e faz 99% no [superadblocktest.com](https://superadblocktest.com). Esconde os espaços vazios de anúncio e os avisos de cookies, pula os anúncios do YouTube sem atrapalhar o vídeo e limpa os parâmetros de rastreamento dos links. O pop-up mostra o que foi bloqueado em cada categoria, e em Configurações dá para escolher categorias e listas.
+- **JavaScript Injector**: em ⋮ › Ferramentas do desenvolvedor, uma janelinha de console para rodar JavaScript em qualquer site, com scripts salvos que podem rodar sozinhos nos sites escolhidos. O F12 continua abrindo as DevTools normais.
 
 ## Novidades da versão 1.1
 
