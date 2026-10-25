@@ -390,3 +390,8 @@ body.no-anim *, body.no-anim *::before, body.no-anim *::after { animation: none 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-delay: 0s !important; transition-duration: 0.01ms !important; }
 }
+
+/* Submenu do menu principal (ex.: Ferramentas do desenvolvedor) */
+.menu.sub-in { animation: sub-in 0.22s cubic-bezier(0.2, 0.9, 0.3, 1); }
+@keyframes sub-in { from { opacity: 0; transform: translateX(14px); } }
+.mi-back .lbl { font-weight: 600; }

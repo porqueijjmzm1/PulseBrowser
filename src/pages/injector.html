@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+  <title>JavaScript Injector</title>
+  <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="injector.css">
+</head>
+<body>
+  <header class="bar">
+    <div class="target" id="target">
+      <span class="dot"></span>
+      <div class="t-text"><b id="t-title">Carregando…</b><span id="t-host"></span></div>
+    </div>
+    <div class="actions">
+      <button class="ib" id="btn-reload" title="Recarregar a página"></button>
+      <button class="ib" id="btn-clear" title="Limpar a saída (Ctrl+L)"></button>
+      <button class="ib" id="btn-scripts" title="Scripts salvos (Ctrl+S salva)"></button>
+      <button class="run" id="btn-run" title="Rodar na página (Ctrl+Enter)"><span class="run-ico"></span>Rodar<kbd>Ctrl+Enter</kbd></button>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="editor" id="editor">
+      <div class="gutter" id="gutter" aria-hidden="true"></div>
+      <div class="code">
+        <pre class="hl" id="hl" aria-hidden="true"></pre>
+        <textarea id="code" wrap="off" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Código JavaScript"
+          placeholder="// JavaScript para rodar na página aberta&#10;document.title&#10;&#10;// $$('a').length, await fetch(location.href).then(r => r.status) ..."></textarea>
+      </div>
+      <div class="editing" id="editing" hidden><span></span><button class="link" id="editing-close" title="Desvincular do script salvo">×</button></div>
+    </section>
+    <div class="split" id="split" title="Arraste para redimensionar"></div>
+    <section class="output">
+      <div class="out-bar">
+        <span class="out-title">Saída</span>
+        <label class="chk" title="Além do que o seu código escreve, mostra tudo o que a página escreve no console">
+          <input type="checkbox" id="all-logs"> Todo o console da página
+        </label>
+      </div>
+      <div class="out" id="out" tabindex="-1"></div>
+    </section>
+  </main>
+
+  <aside class="drawer" id="drawer" aria-hidden="true">
+    <div class="d-head">
+      <b>Scripts salvos</b>
+      <button class="ib" id="d-close" title="Fechar"></button>
+    </div>
+    <form class="save" id="save-form" autocomplete="off">
+      <input id="f-name" maxlength="80" placeholder="Nome do script">
+      <label class="chk"><input type="checkbox" id="f-auto"> Rodar sozinho quando abrir estes sites:</label>
+      <input id="f-sites" maxlength="600" placeholder="youtube.com, *.google.com ou * para todos">
+      <div class="f-err" id="f-err" hidden></div>
+      <div class="f-row">
+        <button type="submit" class="btn primary" id="f-save">Salvar código atual</button>
+        <button type="button" class="btn" id="f-new" title="Começar um script novo">Novo</button>
+      </div>
+    </form>
+    <div class="d-list" id="d-list"></div>
+  </aside>
+
+  <script src="../shared/icons.js"></script>
+  <script src="injector.js"></script>
+</body>
+</html>

@@ -42,6 +42,7 @@ function bootstrap() {
     ctx.quitting = true;
     for (const s of [ctx.settings, ctx.history, ctx.bookmarks, ctx.downloads, ctx.passwords, ctx.accounts]) s?.store?.flush();
     ctx.grammar?.flush?.();
+    ctx.injector?.flush();
     ctx.shield?.stats?.flush();
   });
   app.on('certificate-error', (event, webContents, url, _error, _cert, callback) => {
@@ -286,6 +287,7 @@ async function init() {
   const { Passwords } = require('./passwords');
   const { GoogleAccounts } = require('./accounts');
   const { Grammar } = require('./grammar');
+  const { Injector } = require('./injector');
 
   ctx.history = new History();
   ctx.bookmarks = new Bookmarks();
@@ -294,6 +296,7 @@ async function init() {
   ctx.passwords = new Passwords();
   ctx.accounts = new GoogleAccounts();
   ctx.grammar = new Grammar();
+  ctx.injector = new Injector();
 
   sessions.cleanAppUserAgent();
   nativeTheme.themeSource = ctx.settings.get('theme');
@@ -303,6 +306,7 @@ async function init() {
   require('./ipc').register();
   require('./autofill').register();
   ctx.grammar.register();
+  ctx.injector.register();
   wireEvents();
   ctx.accounts.start();
   ctx.shield.start();

@@ -143,6 +143,8 @@
         <button class="zbtn" data-cmd="fullscreen" title="Tela cheia (F11)">${icon('maximize', 16)}</button>
       </div>`;
     }
+    if (it.back) return `<button class="mi mi-back" data-back="1">${icon('chevronLeft', 16)}<span class="lbl">${esc(it.label)}</span></button>`;
+    if (it.sub) return `<button class="mi" data-sub="${it.sub}">${icon(it.icon, 16)}<span class="lbl">${esc(it.label)}</span><span class="key">${icon('chevronRight', 14)}</span></button>`;
     const right = it.check != null
       ? (it.check ? `<span class="chk">${icon('check', 16)}</span>` : '')
       : it.key ? `<span class="key">${esc(it.key)}</span>` : '';
@@ -169,7 +171,7 @@
       { icon: 'file', label: 'Salvar página como...', key: 'Ctrl+S', cmd: 'save-page' },
       { icon: 'camera', label: 'Capturar tela da página', key: 'Ctrl+Shift+S', cmd: 'screenshot' },
       { icon: 'search', label: 'Localizar na página...', key: 'Ctrl+F', cmd: 'find' },
-      { icon: 'code', label: 'Ferramentas do desenvolvedor', key: 'F12', cmd: 'devtools' },
+      { icon: 'code', label: 'Ferramentas do desenvolvedor', sub: 'dev' },
       'sep',
       { icon: 'bookmark', label: 'Mostrar barra de favoritos', cmd: 'toggle-bookmarks-bar', check: !!d.bookmarksBar, keepOpen: true },
       { icon: 'settings', label: 'Configurações', cmd: 'settings' },
@@ -177,12 +179,28 @@
       'sep',
       { icon: 'exit', label: 'Sair', cmd: 'quit' },
     ];
-    popup.innerHTML = `<div class="menu stagger">${items.map(menuItem).join('')}</div>`;
+    showMenuItems(items, d);
+  }
+
+  // Submenus do menu principal (abrem no mesmo pop-up, com "voltar").
+  const SUBMENUS = {
+    dev: () => [
+      { back: true, label: 'Ferramentas do desenvolvedor' },
+      'sep',
+      { icon: 'terminal', label: 'Console', key: 'F12', cmd: 'devtools' },
+      { icon: 'code', label: 'JavaScript Injector', cmd: 'injector' },
+    ],
+  };
+
+  function showMenuItems(items, d, cls = '') {
+    popup.innerHTML = `<div class="menu stagger ${cls}">${items.map(menuItem).join('')}</div>`;
     stagger();
     popup.querySelectorAll('[data-cmd]').forEach((b) => b.addEventListener('click', () => {
       act({ act: 'command', cmd: b.dataset.cmd, keepOpen: !!b.dataset.keep });
     }));
     popup.querySelectorAll('[data-zoom]').forEach((b) => b.addEventListener('click', () => act({ act: 'zoom', dir: Number(b.dataset.zoom) })));
+    popup.querySelectorAll('[data-sub]').forEach((b) => b.addEventListener('click', () => showMenuItems(SUBMENUS[b.dataset.sub](), d, 'sub-in')));
+    popup.querySelectorAll('[data-back]').forEach((b) => b.addEventListener('click', () => renderMenu(d)));
   }
 
   function dlStatus(r) {

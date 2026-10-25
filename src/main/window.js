@@ -1252,6 +1252,7 @@ class PulseWindow {
         case 'zoom-out': this.zoom(-1); break;
         case 'zoom-reset': this.zoom(0); break;
         case 'devtools': case 'devtools-inspect': tab?.toggleDevTools(); break;
+        case 'injector': ctx.injector?.open(this); break;
         case 'view-source':
           if (tab && /^(https?|file):/i.test(tab.displayUrl)) this.createTab({ url: `view-source:${tab.displayUrl}`, opener: tab });
           break;

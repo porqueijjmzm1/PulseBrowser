@@ -139,6 +139,7 @@ class Tab {
       if (!details.isMainFrame || details.isSameDocument) return;
       this.view?.setBackgroundColor(this._backgroundFor(details.url));
     });
+    wc.on('dom-ready', () => ctx.injector?.onDomReady(this));
     wc.on('did-navigate', (_e, rawUrl, httpResponseCode) => {
       const url = this.viewSource && !rawUrl.startsWith('view-source:') && /^(https?|file):/i.test(rawUrl)
         ? `view-source:${rawUrl}`
